@@ -1,7 +1,5 @@
 import datetime
 
-import pytest
-
 from models import Batch, OrderLine
 
 
