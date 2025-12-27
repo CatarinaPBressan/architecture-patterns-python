@@ -103,7 +103,7 @@ env.bak/
 venv.bak/
 
 # VS Code
-.vscode/
+#.vscode/
 
 # macOS
 .DS_Store
