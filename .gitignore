@@ -116,3 +116,6 @@ venv.bak/
 
 # pytest cache
 .cache
+
+#sqlite databases
+*.sqlite

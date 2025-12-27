@@ -1,14 +1,14 @@
-from sqlalchemy import Column, MetaData, Table
-from sqlalchemy.orm import Mapper
+from sqlalchemy import Column, Table
+from sqlalchemy.orm import registry
 from sqlalchemy.types import Date, Integer, String
 
 import models
 
-metadata = MetaData()
+mapper_registry = registry()
 
 order_lines = Table(
     "order_lines",
-    metadata,
+    mapper_registry.metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("sku", String(255)),
     Column("quantity", Integer, nullable=False),
@@ -17,7 +17,7 @@ order_lines = Table(
 
 batches = Table(
     "batches",
-    metadata,
+    mapper_registry.metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("reference", String(255)),
     Column("sku", String(255)),
@@ -27,7 +27,5 @@ batches = Table(
 
 
 def start_mappers():
-    order_lines_mapper = Mapper(models.OrderLine, order_lines)
-    batches_mapper = Mapper(models.Batch, batches)
-
-    return (order_lines_mapper, batches_mapper)
+    mapper_registry.map_imperatively(models.OrderLine, order_lines)
+    mapper_registry.map_imperatively(models.Batch, batches)

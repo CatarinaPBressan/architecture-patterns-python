@@ -2,11 +2,14 @@ import dataclasses
 import datetime
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass()
 class OrderLine:
     order_id: str
     sku: str
     quantity: int
+
+    def __hash__(self) -> int:
+        return hash(self.order_id) + hash(self.sku) + hash(self.quantity)
 
 
 class Batch:
