@@ -2,7 +2,7 @@ import datetime
 
 import pytest
 
-from models import Batch, NotEnoughStockError, OrderLine
+from models import Batch, OrderLine
 
 
 def make_batch_and_line(sku: str, batch_quantity: int, line_quantity: int):
@@ -60,24 +60,3 @@ def test_allocation_is_idempotent():
     batch.allocate(line)
 
     assert batch.available_quantity == 18
-
-
-# def test_allocating_a_batch_fails_if_theres_not_enough():
-#     batch = Batch("batch-002", sku="BLUE-CUSHION", quantity=1)
-#     line = OrderLine(order_id="abc", sku="BLUE-CUSHION", quantity=2)
-
-#     with pytest.raises(NotEnoughStockError):
-#         batch.allocate(line)
-
-
-# def test_allocating_a_batch_fails_if_allocated_to_same_line():
-#     batch = Batch("batch-002", sku="BLUE-VASE", quantity=10)
-#     line = OrderLine(order_id="abc", sku="BLUE-VASE", quantity=2)
-
-#     batch.allocate(line)
-
-#     assert batch.quantity == 8
-
-#     batch.allocate(line)
-
-#     assert batch.quantity == 8

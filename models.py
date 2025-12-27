@@ -35,6 +35,13 @@ class Batch:
     def __hash__(self) -> int:
         return hash(self.reference)
 
+    def __gt__(self, other: "Batch") -> bool:
+        if self.eta is None:
+            return False
+        if other.eta is None:
+            return True
+        return self.eta > other.eta
+
     def allocate(self, line: OrderLine):
         if self.can_allocate(line):
             self._allocations.add(line)
@@ -55,5 +62,15 @@ class Batch:
         return self.available_quantity >= line.quantity and self.sku == line.sku
 
 
-class NotEnoughStockError(Exception):
+def allocate(line: OrderLine, batches: list[Batch]) -> str:
+    try:
+        batch = next(_batch for _batch in sorted(batches) if _batch.can_allocate(line))
+    except StopIteration as e:
+        raise OutOfStockError(f"Out of stock for sku {line.sku}") from e
+
+    batch.allocate(line)
+    return batch.reference
+
+
+class OutOfStockError(Exception):
     pass
