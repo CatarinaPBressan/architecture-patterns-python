@@ -1,4 +1,6 @@
 import abc
+import datetime
+import sqlite3
 
 from sqlalchemy import orm, select
 
@@ -13,6 +15,10 @@ class AbstractRepository(abc.ABC):
 
     @abc.abstractmethod
     def get(self, reference: str) -> models.Batch:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def list(self) -> list[models.Batch]:
         raise NotImplementedError
 
 
@@ -50,3 +56,77 @@ class FakeRepository(AbstractRepository):
 
     def list(self) -> list[models.Batch]:
         return list(self._batches)
+
+
+class RawSQLRepository(AbstractRepository):
+
+    _connection: sqlite3.Connection
+
+    def __init__(self) -> None:
+        self._connection = sqlite3.connect(":memory:")
+        self._init_tables()
+
+    def __del__(self):
+        self._connection.close()
+        pass
+
+    def _init_tables(self):
+        cursor = self._connection.cursor()
+        cursor.execute(
+            "CREATE TABLE order_lines ("
+            "id INTEGER PRIMARY KEY, "
+            "sku TEXT, "
+            "quantity INTEGER, "
+            "order_id TEXT, "
+            "batch_id INTEGER "
+            ")"
+        )
+        cursor.execute(
+            "CREATE TABLE batches ("
+            "id INTEGER PRIMARY KEY, "
+            "reference TEXT, "
+            "sku TEXT, "
+            "eta TEXT, "
+            "purchased_quantity INTEGER "
+            ")"
+        )
+
+    def _to_model(self, row: tuple[str, str, int, str]) -> models.Batch:
+        return models.Batch(row[0], row[1], row[2], datetime.date.fromisoformat(row[3]))
+
+    def commit(self):
+        self._connection.commit()
+
+    def add(self, batch: models.Batch):
+        cursor = self._connection.cursor()
+        cursor.execute(
+            "INSERT INTO batches "
+            "(reference, sku, eta, purchased_quantity)"
+            "VALUES (?, ?, ?, ?)",
+            (
+                batch.reference,
+                batch.sku,
+                batch.eta.isoformat(),
+                batch._purchased_quantity,
+            ),
+        )
+
+    def get(self, reference: str) -> models.Batch:
+        cursor = self._connection.cursor()
+        row = cursor.execute(
+            "SELECT reference, sku, purchased_quantity, eta "
+            "FROM batches "
+            "WHERE reference = ?",
+            (reference,),
+        ).fetchone()
+
+        return self._to_model(row)
+
+    def list(self) -> list[models.Batch]:
+        cursor = self._connection.cursor()
+        return [
+            self._to_model(row)
+            for row in cursor.execute(
+                "SELECT reference, sku, purchased_quantity, eta FROM batches"
+            )
+        ]
