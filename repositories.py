@@ -97,7 +97,7 @@ class RawSQLRepository(AbstractRepository):
     def commit(self):
         self._connection.commit()
 
-    def add(self, batch: models.Batch):
+    def add(self, batch: models.Batch) -> int:
         cursor = self._connection.cursor()
         cursor.execute(
             "INSERT INTO batches "
@@ -114,19 +114,33 @@ class RawSQLRepository(AbstractRepository):
     def get(self, reference: str) -> models.Batch:
         cursor = self._connection.cursor()
         row = cursor.execute(
-            "SELECT reference, sku, purchased_quantity, eta "
+            "SELECT reference, sku, purchased_quantity, eta, id "
             "FROM batches "
             "WHERE reference = ?",
             (reference,),
         ).fetchone()
 
-        return self._to_model(row)
+        batch = self._to_model(row)
+        batch._allocations = self._get_allocations(row[4])
+        return batch
+
+    def _get_allocations(self, batch_id: int) -> set[models.OrderLine]:
+        cursor = self._connection.cursor()
+        rows = cursor.execute(
+            "SELECT order_id, sku, quantity FROM order_lines WHERE batch_id = ?",
+            (batch_id,),
+        )
+        return {models.OrderLine(row[0], row[1], row[2]) for row in rows}
 
     def list(self) -> list[models.Batch]:
         cursor = self._connection.cursor()
-        return [
-            self._to_model(row)
-            for row in cursor.execute(
-                "SELECT reference, sku, purchased_quantity, eta FROM batches"
-            )
-        ]
+
+        batches: list[models.Batch] = []
+        for row in cursor.execute(
+            "SELECT reference, sku, purchased_quantity, eta, id FROM batches"
+        ):
+            batch = self._to_model(row)
+            batch._allocations = self._get_allocations(row[4])
+            batches.append(batch)
+
+        return batches

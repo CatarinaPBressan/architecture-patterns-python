@@ -46,6 +46,7 @@ def test_get():
             batch._purchased_quantity,
         ),
     )
+    raw_sql_repo.commit()
 
     retrieved = raw_sql_repo.get("ref")
 
@@ -85,6 +86,7 @@ def test_list():
             batch2._purchased_quantity,
         ),
     )
+    raw_sql_repo.commit()
 
     [retrieved1, retrieved2] = raw_sql_repo.list()
 
@@ -93,4 +95,35 @@ def test_list():
 
 
 def test_get_batch_with_allocations():
-    assert False
+    today = datetime.date.today()
+    reference = "ref1"
+    raw_sql_repo = repositories.RawSQLRepository()
+    cursor = raw_sql_repo._connection.cursor()
+    cursor.execute(
+        "INSERT INTO batches "
+        "(reference, sku, eta, purchased_quantity) "
+        "VALUES (?, ?, ?, ?)",
+        (
+            reference,
+            "RAW-DESK",
+            today.isoformat(),
+            100,
+        ),
+    )
+    raw_sql_repo.commit()
+    row_id = cursor.execute(
+        "SELECT id " "FROM batches " "WHERE reference = ?",
+        (reference,),
+    ).fetchone()
+    cursor.execute(
+        "INSERT INTO order_lines "
+        "(sku, quantity, order_id, batch_id) "
+        "VALUES "
+        '("RUSTY-SPOON", 10, "order123", ?)',
+        row_id,
+    )
+    raw_sql_repo.commit()
+
+    batch = raw_sql_repo.get(reference)
+
+    assert batch._allocations == {models.OrderLine("order123", "RUSTY-SPOON", 10)}
