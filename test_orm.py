@@ -1,10 +1,11 @@
 from sqlalchemy import select, text
+from sqlalchemy.orm import Session
 
 import models
 from orm import order_lines
 
 
-def test_orderline_mapper_can_load_lines(session):
+def test_orderline_mapper_can_load_lines(session: Session):
     session.execute(
         text(
             "INSERT INTO order_lines (order_id, sku, quantity) VALUES"
@@ -23,7 +24,7 @@ def test_orderline_mapper_can_load_lines(session):
     assert session.scalars(select(models.OrderLine)).all() == expected
 
 
-def test_orderline_mapper_can_load_lines_select_by_table(session):
+def test_orderline_mapper_can_load_lines_select_by_table(session: Session):
     session.execute(
         text(
             "INSERT INTO order_lines (order_id, sku, quantity) VALUES"
@@ -34,15 +35,15 @@ def test_orderline_mapper_can_load_lines_select_by_table(session):
     )
 
     expected = [
-        (1, "RED-CHAIR", 12, "order1"),
-        (2, "BLUE-TABLE", 13, "order1"),
-        (3, "BLUE-LIPSTICK", 14, "order1"),
+        (1, "RED-CHAIR", 12, "order1", None),
+        (2, "BLUE-TABLE", 13, "order1", None),
+        (3, "BLUE-LIPSTICK", 14, "order1", None),
     ]
 
     assert session.execute(select(order_lines)).all() == expected
 
 
-def test_orderline_mapper_can_save_lines(session):
+def test_orderline_mapper_can_save_lines(session: Session):
     new_line = models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)
     session.add(new_line)
     session.commit()
