@@ -102,6 +102,7 @@ def test_400_message_for_out_of_stock(flask_test_client, session):
 
 def test_400_message_for_invalid_sku(flask_test_client, session):
     sku = random_sku()
+
     order_id = random_order_id()
     data = {"order_id": order_id, "sku": sku, "quantity": 20}
 

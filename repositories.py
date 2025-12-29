@@ -43,7 +43,7 @@ class FakeRepository(AbstractRepository):
 
     _batches: set[models.Batch]
 
-    def __init__(self, batches) -> None:
+    def __init__(self, batches: list[models.Batch]) -> None:
         self._batches = set(batches)
 
     def add(self, batch: models.Batch):
