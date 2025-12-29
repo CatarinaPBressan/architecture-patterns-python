@@ -26,7 +26,13 @@ def init_app(session_maker=None):
             request.json["order_id"], request.json["sku"], request.json["quantity"]
         )
 
-        batch_ref = models.allocate(line, batches)
+        if not line.sku in [batch.sku for batch in batches]:
+            return jsonify({"message": f"Invalid sku {line.sku}"}), 400
+
+        try:
+            batch_ref = models.allocate(line, batches)
+        except models.OutOfStockError as e:
+            return jsonify({"message": str(e)}), 400
 
         repository.session.commit()
 

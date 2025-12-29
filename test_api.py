@@ -85,3 +85,27 @@ def test_allocations_are_persisted(flask_test_client, session):
     response = flask_test_client.post("/allocate", json=line2)
     assert response.status_code == 201
     assert response.json["batch_ref"] == batch2
+
+
+def test_400_message_for_out_of_stock(flask_test_client, session):
+    sku = random_sku()
+    batch_ref = random_batch_ref()
+    order_id = random_order_id()
+    add_stock([(batch_ref, sku, 10, None)], session)
+    data = {"order_id": order_id, "sku": sku, "quantity": 20}
+
+    response = flask_test_client.post("/allocate", json=data)
+
+    assert response.status_code == 400
+    assert response.json["message"] == f"Out of stock for sku {sku}"
+
+
+def test_400_message_for_invalid_sku(flask_test_client, session):
+    sku = random_sku()
+    order_id = random_order_id()
+    data = {"order_id": order_id, "sku": sku, "quantity": 20}
+
+    response = flask_test_client.post("/allocate", json=data)
+
+    assert response.status_code == 400
+    assert response.json["message"] == f"Invalid sku {sku}"
