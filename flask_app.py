@@ -8,10 +8,14 @@ import orm
 import repositories
 
 
-def init_app():
+def init_app(session_maker=None):
     app = Flask(__name__)
 
-    get_session = sessionmaker(bind=create_engine(config.get_memory_sqlite()))
+    get_session = (
+        session_maker
+        if session_maker
+        else sessionmaker(bind=create_engine(config.get_memory_sqlite()))
+    )
 
     @app.route("/allocate", methods=["POST"])
     def allocate_endpoint():
@@ -24,7 +28,7 @@ def init_app():
 
         batch_ref = models.allocate(line, batches)
 
-        # repository.session.commit()
+        repository.session.commit()
 
         return jsonify({"batch_ref": batch_ref}), 201
 

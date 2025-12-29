@@ -15,6 +15,10 @@ class AbstractRepository(abc.ABC):
     def get(self, reference: str) -> models.Batch:
         raise NotImplementedError
 
+    @abc.abstractmethod
+    def list(self) -> list[models.Batch]:
+        raise NotImplementedError
+
 
 class SQLAlchemyRepository(AbstractRepository):
 
@@ -32,7 +36,7 @@ class SQLAlchemyRepository(AbstractRepository):
         )
 
     def list(self) -> list[models.Batch]:
-        return self.session.scalars(select(models.Batch)).all()
+        return list(self.session.scalars(select(models.Batch)).all())
 
 
 class FakeRepository(AbstractRepository):

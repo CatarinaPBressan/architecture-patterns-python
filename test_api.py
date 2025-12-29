@@ -10,15 +10,15 @@ tomorrow = today + datetime.timedelta(days=1)
 
 
 def random_sku():
-    return str(uuid.uuid4())
+    return f"SKU {str(uuid.uuid4())[:8]}"
 
 
 def random_batch_ref():
-    return str(uuid.uuid4())
+    return f"BATCH {str(uuid.uuid4())[:8]}"
 
 
 def random_order_id():
-    return str(uuid.uuid4())
+    return f"ORDER {str(uuid.uuid4())[:8]}"
 
 
 def add_stock(batches: list[tuple[str, str, int, str | None]], session: Session):
@@ -75,8 +75,8 @@ def test_allocations_are_persisted(flask_test_client, session):
         ],
         session,
     )
-    line1 = {"order_id": order1, "sku": sku, "quantity": 10}
-    line2 = {"order_id": order2, "sku": sku, "quantity": 10}
+    line1 = {"order_id": order1, "sku": sku, "quantity": 100}
+    line2 = {"order_id": order2, "sku": sku, "quantity": 100}
 
     response = flask_test_client.post("/allocate", json=line1)
     assert response.status_code == 201
