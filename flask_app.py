@@ -19,7 +19,7 @@ def init_app(session_maker=None):
     )
 
     @app.route("/allocate", methods=["POST"])
-    def allocate_endpoint():
+    def allocate():
         session = get_session()
         repository = repositories.SQLAlchemyRepository(session)
         line = models.OrderLine(
@@ -32,6 +32,21 @@ def init_app(session_maker=None):
             return jsonify({"message": str(e)}), 400
 
         return jsonify({"batch_ref": batch_ref}), 201
+
+    @app.route("/deallocate", methods=["POST"])
+    def deallocate():
+        session = get_session()
+        repository = repositories.SQLAlchemyRepository(session)
+        line = models.OrderLine(
+            request.json["order_id"], request.json["sku"], request.json["quantity"]
+        )
+
+        try:
+            batch_ref = services.deallocate(line, repository, session)
+        except (models.UnallocatedError, services.InvalidSKUError) as e:
+            return jsonify({"message": str(e)}), 400
+
+        return jsonify({"batch_ref": batch_ref}), 200
 
     return app
 

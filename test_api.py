@@ -72,38 +72,35 @@ def test_400_message_for_invalid_sku(flask_test_client, session):
     assert response.json["message"] == f"Invalid sku {sku}"
 
 
-# @pytest.mark.usefixtures("postgres_db")
-# @pytest.mark.usefixtures("restart_api")
-# def test_deallocate():
-#     sku, order1, order2 = random_sku(), random_orderid(), random_orderid()
-#     batch = random_batchref()
-#     post_to_add_batch(batch, sku, 100, "2011-01-02")
-#     url = config.get_api_url()
-#     # fully allocate
-#     r = requests.post(
-#         f"{url}/allocate", json={"orderid": order1, "sku": sku, "qty": 100}
-#     )
-#     assert r.json()["batchid"] == batch
+def test_deallocate(flask_test_client, session):
+    sku = random_sku()
+    order_1 = random_order_id()
+    order_2 = random_order_id()
+    batch = random_batch_ref()
+    add_stock([(batch, sku, 100, "2025-12-29")], session)
 
-#     # cannot allocate second order
-#     r = requests.post(
-#         f"{url}/allocate", json={"orderid": order2, "sku": sku, "qty": 100}
-#     )
-#     assert r.status_code == 400
+    response = flask_test_client.post(
+        "/allocate", json={"order_id": order_1, "sku": sku, "quantity": 100}
+    )
+    assert response.status_code == 201
+    assert response.json["batch_ref"] == batch
 
-#     # deallocate
-#     r = requests.post(
-#         f"{url}/deallocate",
-#         json={
-#             "orderid": order1,
-#             "sku": sku,
-#         },
-#     )
-#     assert r.ok
+    # cannot allocate second order
+    response = flask_test_client.post(
+        "/allocate", json={"order_id": order_2, "sku": sku, "quantity": 100}
+    )
+    assert response.status_code == 400
 
-#     # now we can allocate second order
-#     r = requests.post(
-#         f"{url}/allocate", json={"orderid": order2, "sku": sku, "qty": 100}
-#     )
-#     assert r.ok
-#     assert r.json()["batchid"] == batch
+    # deallocate
+    response = flask_test_client.post(
+        "/deallocate",
+        json={"order_id": order_1, "sku": sku, "quantity": 100},
+    )
+    assert response.status_code == 200
+
+    # now we can allocate second order
+    response = flask_test_client.post(
+        f"/allocate", json={"order_id": order_2, "sku": sku, "quantity": 100}
+    )
+    assert response.status_code == 201
+    assert response.json["batch_ref"] == batch
