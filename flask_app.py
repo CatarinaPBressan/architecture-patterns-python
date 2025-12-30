@@ -6,6 +6,7 @@ import config
 import models
 import orm
 import repositories
+import services
 
 
 def init_app(session_maker=None):
@@ -21,20 +22,14 @@ def init_app(session_maker=None):
     def allocate_endpoint():
         session = get_session()
         repository = repositories.SQLAlchemyRepository(session)
-        batches = repository.list()
         line = models.OrderLine(
             request.json["order_id"], request.json["sku"], request.json["quantity"]
         )
 
-        if not line.sku in [batch.sku for batch in batches]:
-            return jsonify({"message": f"Invalid sku {line.sku}"}), 400
-
         try:
-            batch_ref = models.allocate(line, batches)
-        except models.OutOfStockError as e:
+            batch_ref = services.allocate(line, repository, session)
+        except (models.OutOfStockError, services.InvalidSKUError) as e:
             return jsonify({"message": str(e)}), 400
-
-        repository.session.commit()
 
         return jsonify({"batch_ref": batch_ref}), 201
 
