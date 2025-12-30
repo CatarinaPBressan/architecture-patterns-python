@@ -1,10 +1,5 @@
-def get_postgres_url() -> str:
-    return "abc"
+def get_sqlite(db_name: str | None = None) -> str:
+    if not db_name:
+        db_name = ":memory:"
 
-
-def get_memory_sqlite() -> str:
-    return "sqlite+pysqlite:///:memory:"
-
-
-def get_api_url() -> str:
-    return "def"
+    return f"sqlite+pysqlite:///{db_name}"

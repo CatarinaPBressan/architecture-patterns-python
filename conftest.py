@@ -9,7 +9,7 @@ import orm as allocations_orm
 
 @pytest.fixture
 def make_session():
-    engine = sqlalchemy.create_engine(config.get_memory_sqlite(), echo=True)
+    engine = sqlalchemy.create_engine(config.get_sqlite(), echo=True)
     allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
 

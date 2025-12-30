@@ -15,7 +15,7 @@ def init_app(session_maker=None):
     get_session = (
         session_maker
         if session_maker
-        else sessionmaker(bind=create_engine(config.get_memory_sqlite()))
+        else sessionmaker(bind=create_engine(config.get_sqlite("app.sqlite")))
     )
 
     @app.route("/allocate", methods=["POST"])
