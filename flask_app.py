@@ -51,6 +51,8 @@ def init_app(session_maker=None):
     return app
 
 
-if __name__ == "__main__":
+def init_flask():
     orm.start_mappers()
-    init_app()
+    _app = init_app()
+
+    return _app
