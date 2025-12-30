@@ -2,14 +2,11 @@ import dataclasses
 import datetime
 
 
-@dataclasses.dataclass()
+@dataclasses.dataclass(unsafe_hash=True)
 class OrderLine:
     order_id: str
     sku: str
     quantity: int
-
-    def __hash__(self) -> int:
-        return hash(self.order_id) + hash(self.sku) + hash(self.quantity)
 
 
 class Batch:
@@ -50,7 +47,7 @@ class Batch:
             self._allocations.add(line)
 
     def deallocate(self, line: OrderLine):
-        if line in self._allocations:
+        if self.can_deallocate(line):
             self._allocations.remove(line)
 
     @property
@@ -64,6 +61,9 @@ class Batch:
     def can_allocate(self, line: OrderLine) -> bool:
         return self.available_quantity >= line.quantity and self.sku == line.sku
 
+    def can_deallocate(self, line: OrderLine) -> bool:
+        return line in self._allocations
+
 
 def allocate(line: OrderLine, batches: list[Batch]) -> str:
     try:
@@ -73,6 +73,22 @@ def allocate(line: OrderLine, batches: list[Batch]) -> str:
 
     batch.allocate(line)
     return batch.reference
+
+
+def deallocate(line: OrderLine, batches: list[Batch]) -> str:
+    try:
+        batch = next(
+            _batch for _batch in sorted(batches) if _batch.can_deallocate(line)
+        )
+    except StopIteration as e:
+        raise UnallocatedError(f"No allocations found for sku {line.sku}") from e
+
+    batch.deallocate(line)
+    return batch.reference
+
+
+class UnallocatedError(Exception):
+    pass
 
 
 class OutOfStockError(Exception):

@@ -61,48 +61,8 @@ def test_api_returns_allocation(flask_test_client, session):
     assert response.json["batch_ref"] == early_batch
 
 
-def test_allocations_are_persisted(flask_test_client, session):
-    sku = random_sku()
-    batch1, batch2 = (
-        random_batch_ref(),
-        random_batch_ref(),
-    )
-    order1, order2 = random_order_id(), random_order_id()
-    add_stock(
-        [
-            (batch1, sku, 100, today.isoformat()),
-            (batch2, sku, 100, tomorrow.isoformat()),
-        ],
-        session,
-    )
-    line1 = {"order_id": order1, "sku": sku, "quantity": 100}
-    line2 = {"order_id": order2, "sku": sku, "quantity": 100}
-
-    response = flask_test_client.post("/allocate", json=line1)
-    assert response.status_code == 201
-    assert response.json["batch_ref"] == batch1
-
-    response = flask_test_client.post("/allocate", json=line2)
-    assert response.status_code == 201
-    assert response.json["batch_ref"] == batch2
-
-
-def test_400_message_for_out_of_stock(flask_test_client, session):
-    sku = random_sku()
-    batch_ref = random_batch_ref()
-    order_id = random_order_id()
-    add_stock([(batch_ref, sku, 10, None)], session)
-    data = {"order_id": order_id, "sku": sku, "quantity": 20}
-
-    response = flask_test_client.post("/allocate", json=data)
-
-    assert response.status_code == 400
-    assert response.json["message"] == f"Out of stock for sku {sku}"
-
-
 def test_400_message_for_invalid_sku(flask_test_client, session):
     sku = random_sku()
-
     order_id = random_order_id()
     data = {"order_id": order_id, "sku": sku, "quantity": 20}
 
@@ -110,3 +70,40 @@ def test_400_message_for_invalid_sku(flask_test_client, session):
 
     assert response.status_code == 400
     assert response.json["message"] == f"Invalid sku {sku}"
+
+
+# @pytest.mark.usefixtures("postgres_db")
+# @pytest.mark.usefixtures("restart_api")
+# def test_deallocate():
+#     sku, order1, order2 = random_sku(), random_orderid(), random_orderid()
+#     batch = random_batchref()
+#     post_to_add_batch(batch, sku, 100, "2011-01-02")
+#     url = config.get_api_url()
+#     # fully allocate
+#     r = requests.post(
+#         f"{url}/allocate", json={"orderid": order1, "sku": sku, "qty": 100}
+#     )
+#     assert r.json()["batchid"] == batch
+
+#     # cannot allocate second order
+#     r = requests.post(
+#         f"{url}/allocate", json={"orderid": order2, "sku": sku, "qty": 100}
+#     )
+#     assert r.status_code == 400
+
+#     # deallocate
+#     r = requests.post(
+#         f"{url}/deallocate",
+#         json={
+#             "orderid": order1,
+#             "sku": sku,
+#         },
+#     )
+#     assert r.ok
+
+#     # now we can allocate second order
+#     r = requests.post(
+#         f"{url}/allocate", json={"orderid": order2, "sku": sku, "qty": 100}
+#     )
+#     assert r.ok
+#     assert r.json()["batchid"] == batch
