@@ -1,12 +1,12 @@
 import datetime
 
-from models import Batch, OrderLine
+from allocations.domain import models
 
 
 def make_batch_and_line(sku: str, batch_quantity: int, line_quantity: int):
     return (
-        Batch("batch-001", sku, batch_quantity, eta=datetime.date.today()),
-        OrderLine("order-123", sku, line_quantity),
+        models.Batch("batch-001", sku, batch_quantity, eta=datetime.date.today()),
+        models.OrderLine("order-123", sku, line_quantity),
     )
 
 
@@ -37,8 +37,8 @@ def test_can_allocate_if_available_equal_than_required():
 
 
 def test_cannot_allocate_if_skus_are_different():
-    batch = Batch("batch-001", "UNCONFORTABLE-CHAIR", 10)
-    line = OrderLine("order-123", "EXPENSIVE-TOASTER", 10)
+    batch = models.Batch("batch-001", "UNCONFORTABLE-CHAIR", 10)
+    line = models.OrderLine("order-123", "EXPENSIVE-TOASTER", 10)
 
     assert batch.can_allocate(line) is False
 

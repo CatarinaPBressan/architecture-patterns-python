@@ -1,9 +1,10 @@
 import abc
 
-from sqlalchemy import orm, select
+from sqlalchemy import orm as sqlalchemy_orm
+from sqlalchemy import select
 
-import models
-import orm as allocations_orm
+from allocations.adapters import orm as allocations_orm
+from allocations.domain import models
 
 
 class AbstractRepository(abc.ABC):
@@ -22,9 +23,9 @@ class AbstractRepository(abc.ABC):
 
 class SQLAlchemyRepository(AbstractRepository):
 
-    session: orm.Session
+    session: sqlalchemy_orm.Session
 
-    def __init__(self, session: orm.Session):
+    def __init__(self, session: sqlalchemy_orm.Session):
         self.session = session
 
     def add(self, batch: models.Batch):

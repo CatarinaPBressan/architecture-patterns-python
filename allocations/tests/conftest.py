@@ -1,10 +1,10 @@
 import pytest
 import sqlalchemy
-from sqlalchemy.orm import sessionmaker
+import sqlalchemy.orm as sqlalchemy_orm
 
-import from  config
-import flask_app
-import orm as allocations_orm
+from allocations import config
+from allocations.adapters import orm as allocations_orm
+from allocations.entrypoints import flask_app
 
 
 @pytest.fixture
@@ -13,7 +13,7 @@ def make_session():
     allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
 
-    yield sessionmaker(bind=engine)
+    yield sqlalchemy_orm.sessionmaker(bind=engine)
 
     allocations_orm.mapper_registry.metadata.drop_all(engine)
     allocations_orm.mapper_registry.dispose()

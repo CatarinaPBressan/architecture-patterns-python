@@ -1,29 +1,28 @@
-from sqlalchemy import Column, ForeignKey, Table
-from sqlalchemy.orm import registry, relationship
-from sqlalchemy.types import Date, Integer, String
+import sqlalchemy
+from sqlalchemy import orm, schema, types
 
-import models
+from allocations.domain import models
 
-mapper_registry = registry()
+mapper_registry = orm.registry()
 
-order_lines = Table(
+order_lines = schema.Table(
     "order_lines",
     mapper_registry.metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("sku", String(255)),
-    Column("quantity", Integer, nullable=False),
-    Column("order_id", String(255)),
-    Column("batch_id", Integer, ForeignKey("batches.id")),
+    sqlalchemy.Column("id", types.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("sku", types.String(255)),
+    sqlalchemy.Column("quantity", types.Integer, nullable=False),
+    sqlalchemy.Column("order_id", types.String(255)),
+    sqlalchemy.Column("batch_id", types.Integer, schema.ForeignKey("batches.id")),
 )
 
-batches = Table(
+batches = schema.Table(
     "batches",
     mapper_registry.metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("reference", String(255)),
-    Column("sku", String(255)),
-    Column("eta", Date, nullable=True),
-    Column("_purchased_quantity", Integer),
+    sqlalchemy.Column("id", types.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("reference", types.String(255)),
+    sqlalchemy.Column("sku", types.String(255)),
+    sqlalchemy.Column("eta", types.Date, nullable=True),
+    sqlalchemy.Column("_purchased_quantity", types.Integer),
 )
 
 
@@ -33,6 +32,6 @@ def start_mappers():
         models.Batch,
         batches,
         properties={
-            "_allocations": relationship(models.OrderLine, collection_class=set)
+            "_allocations": orm.relationship(models.OrderLine, collection_class=set)
         },
     )

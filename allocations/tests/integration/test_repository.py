@@ -1,11 +1,11 @@
-from sqlalchemy import select, text
-from sqlalchemy.orm import Session
+from sqlalchemy import orm as sqlalchemy_orm
+from sqlalchemy import text
 
-import models
-import repositories
+from allocations.adapters import repositories
+from allocations.domain import models
 
 
-def insert_order_line(order_id: str, sku: str, session: Session) -> int:
+def insert_order_line(order_id: str, sku: str, session: sqlalchemy_orm.Session) -> int:
     params = {"order_id": order_id, "sku": sku}
 
     session.execute(
@@ -24,7 +24,7 @@ def insert_order_line(order_id: str, sku: str, session: Session) -> int:
     return order_line_id
 
 
-def insert_batch(reference: str, sku: str, session: Session) -> int:
+def insert_batch(reference: str, sku: str, session: sqlalchemy_orm.Session) -> int:
     params = {"reference": reference, "sku": sku}
     session.execute(
         text(
@@ -40,7 +40,9 @@ def insert_batch(reference: str, sku: str, session: Session) -> int:
     return batch_id
 
 
-def insert_allocation(order_line_id: int, batch_id: int, session: Session):
+def insert_allocation(
+    order_line_id: int, batch_id: int, session: sqlalchemy_orm.Session
+):
     params = {"order_line_id": order_line_id, "batch_id": batch_id}
 
     session.execute(
@@ -49,7 +51,9 @@ def insert_allocation(order_line_id: int, batch_id: int, session: Session):
     )
 
 
-def test_repository_can_retrieve_a_batch_with_allocations(session: Session):
+def test_repository_can_retrieve_a_batch_with_allocations(
+    session: sqlalchemy_orm.Session,
+):
     sku = "GENERIC-SOFA"
     reference = "batchref"
     order_line_id = insert_order_line("order123", sku, session)
@@ -67,7 +71,7 @@ def test_repository_can_retrieve_a_batch_with_allocations(session: Session):
     assert retrieved._allocations == {models.OrderLine("order123", sku, 1)}
 
 
-def test_repository_can_save_a_batch(session: Session):
+def test_repository_can_save_a_batch(session: sqlalchemy_orm.Session):
     batch = models.Batch("batch1", "RUSTY-SOAPDISH", 100, eta=None)
     repo = repositories.SQLAlchemyRepository(session)
 

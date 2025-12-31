@@ -2,9 +2,9 @@ import datetime
 
 import pytest
 
-import models
-import repositories
-import services
+from allocations.adapters import repositories
+from allocations.domain import models
+from allocations.service_layer import services
 
 
 class FakeSession:

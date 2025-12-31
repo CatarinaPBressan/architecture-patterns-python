@@ -1,7 +1,7 @@
 import datetime
 
-import models
-import repositories
+from allocations.adapters import repositories
+from allocations.domain import models
 
 
 class InvalidSKUError(Exception):

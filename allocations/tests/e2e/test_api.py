@@ -1,9 +1,8 @@
 import datetime
-import typing
 import uuid
 
+from sqlalchemy import orm as sqlalchemy_orm
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 today = datetime.date.today()
 tomorrow = today + datetime.timedelta(days=1)
@@ -21,7 +20,9 @@ def random_order_id():
     return f"ORDER {str(uuid.uuid4())[:8]}"
 
 
-def add_stock(batches: list[tuple[str, str, int, str | None]], session: Session):
+def add_stock(
+    batches: list[tuple[str, str, int, str | None]], session: sqlalchemy_orm.Session
+):
     for batch in batches:
         session.execute(
             text(
@@ -103,4 +104,5 @@ def test_deallocate(flask_test_client, session):
         f"/allocate", json={"order_id": order_2, "sku": sku, "quantity": 100}
     )
     assert response.status_code == 201
+    assert response.json["batch_ref"] == batch
     assert response.json["batch_ref"] == batch
