@@ -2,7 +2,7 @@ import pytest
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 
-import config
+import from  config
 import flask_app
 import orm as allocations_orm
 
