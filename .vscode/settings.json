@@ -13,5 +13,5 @@
     "editor.formatOnPaste": true,
     "editor.formatOnSaveMode": "file"
   },
-  "isort.args": ["--profile", "black"]
+  "isort.args": ["--profile", "black", "--line-length", "100", "--float-to-top"]
 }
