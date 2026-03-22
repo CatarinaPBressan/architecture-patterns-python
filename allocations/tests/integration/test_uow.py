@@ -1,5 +1,6 @@
 import datetime
 
+import pytest
 from sqlalchemy import orm as sqlalchemy_orm
 from sqlalchemy import text
 
@@ -54,3 +55,26 @@ def test_uow_can_retrieve_a_batch_and_allocate_to_it(make_session):
 
     batch_ref = get_allocated_batch_ref("o1", "HIPSTER-WORKBENCH", session)
     assert batch_ref == "batch1"
+
+
+def test_rolls_back_uncommited_work_by_default(make_session):
+    with (uow := unit_of_work.SqlAlchemyUnitOfWork(make_session)):
+        insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
+
+    session = make_session()
+    rows = list(session.execute(text("SELECT * FROM 'batches'")))
+    assert rows == []
+
+
+def test_rolls_back_on_error(make_session):
+    class TestException(Exception):
+        pass
+
+    with pytest.raises(TestException):
+        with (uow := unit_of_work.SqlAlchemyUnitOfWork(make_session)):
+            insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
+            raise TestException
+
+    session = make_session()
+    rows = list(session.execute(text("SELECT * FROM 'batches'")))
+    assert rows == []
