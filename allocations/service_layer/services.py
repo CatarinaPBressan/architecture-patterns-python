@@ -31,9 +31,14 @@ def allocate(
 
 
 def deallocate(
-    line: models.OrderLine, repository: repositories.AbstractRepository, session
+    order_id: str,
+    sku: str,
+    quantity: int,
+    repository: repositories.AbstractRepository,
+    session,
 ) -> str:
     batches = repository.list()
+    line = models.OrderLine(order_id, sku, quantity)
     if not is_valid_sku(line.sku, batches):
         raise InvalidSKUError(f"Invalid sku {line.sku}")
 

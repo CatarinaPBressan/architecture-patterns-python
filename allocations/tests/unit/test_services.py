@@ -53,13 +53,12 @@ def test_deallocate_frees_available_quantity():
     repo = repositories.FakeRepository([])
     session = FakeSession()
     batch = services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
-    line = models.OrderLine("o1", "BLUE-PLINTH", 10)
 
     services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch.available_quantity == 90
 
-    services.deallocate(line, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch.available_quantity == 100
 
@@ -77,14 +76,13 @@ def test_deallocate_deallocates_from_correct_batch():
         repo,
         session,
     )
-    line = models.OrderLine("o1", "BLUE-PLINTH", 10)
 
     services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch_1.available_quantity == 90
     assert batch_2.available_quantity == 100
 
-    services.deallocate(line, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch_1.available_quantity == 100
     assert batch_2.available_quantity == 100
@@ -95,14 +93,13 @@ def test_deallocate_deallocates_from_matching_sku_batch():
     session = FakeSession()
     batch_1 = services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
     batch_2 = services.add_batch("b2", "RED-SOFA", 100, None, repo, session)
-    line = models.OrderLine("o1", "BLUE-PLINTH", 10)
 
     services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch_1.available_quantity == 90
     assert batch_2.available_quantity == 100
 
-    services.deallocate(line, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
 
     assert batch_1.available_quantity == 100
     assert batch_2.available_quantity == 100
@@ -112,16 +109,14 @@ def test_trying_to_deallocate_unallocated_batch():
     repo = repositories.FakeRepository([])
     session = FakeSession()
     services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
-    line = models.OrderLine("o1", "BLUE-PLINTH", 10)
 
     with pytest.raises(models.UnallocatedError, match="BLUE-PLINTH"):
-        services.deallocate(line, repo, session)
+        services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
 
 
 def test_trying_to_deallocate_non_existing_batch():
     repo = repositories.FakeRepository([])
     session = FakeSession()
-    line = models.OrderLine("o1", "BLUE-PLINTH", 10)
 
     with pytest.raises(services.InvalidSKUError, match="BLUE-PLINTH"):
-        services.deallocate(line, repo, session)
+        services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
