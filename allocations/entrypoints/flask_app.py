@@ -1,3 +1,5 @@
+import datetime
+
 import flask
 import sqlalchemy
 from sqlalchemy import orm as sqlalchemy_orm
@@ -5,7 +7,7 @@ from sqlalchemy import orm as sqlalchemy_orm
 from allocations import config
 from allocations.adapters import orm as allocations_orm
 from allocations.adapters import repositories
-from allocations.domain import exceptions, models
+from allocations.domain import exceptions
 from allocations.service_layer import services
 
 
@@ -40,6 +42,7 @@ def init_app(session_maker=None):
         session = get_session()
         repository = repositories.SQLAlchemyRepository(session)
         current_request = flask.request
+
         order_id = current_request.json["order_id"]
         sku = current_request.json["sku"]
         quantity = current_request.json["quantity"]
@@ -52,6 +55,35 @@ def init_app(session_maker=None):
             return flask.jsonify({"message": str(e)}), 400
 
         return flask.jsonify({"batch_ref": batch_ref}), 200
+
+    @app.route("/add_batch", methods=["POST"])
+    def add_batch():
+        session = get_session()
+        repository = repositories.SQLAlchemyRepository(session)
+        current_request = flask.request
+
+        reference = current_request.json["reference"]
+        sku = current_request.json["sku"]
+        quantity = current_request.json["quantity"]
+        eta = current_request.json.get("eta")
+        if eta is not None:
+            eta = datetime.date.fromisoformat(eta)
+
+        batch = services.add_batch(reference, sku, quantity, eta, repository, session)
+
+        return (
+            flask.jsonify(
+                {
+                    "batch": {
+                        "reference": batch.reference,
+                        "sku": batch.sku,
+                        "available_quantity": batch.available_quantity,
+                        "eta": batch.eta.isoformat() if batch.eta else None,
+                    }
+                }
+            ),
+            201,
+        )
 
     return app
 

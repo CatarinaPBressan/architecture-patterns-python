@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from allocations.adapters import repositories
-from allocations.domain import exceptions, models
+from allocations.domain import exceptions
 from allocations.service_layer import services
 
 

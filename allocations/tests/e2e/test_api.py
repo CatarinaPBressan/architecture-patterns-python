@@ -1,9 +1,6 @@
 import datetime
 import uuid
 
-from sqlalchemy import orm as sqlalchemy_orm
-from sqlalchemy import text
-
 today = datetime.date.today()
 tomorrow = today + datetime.timedelta(days=1)
 
@@ -20,25 +17,18 @@ def random_order_id():
     return f"ORDER {str(uuid.uuid4())[:8]}"
 
 
-def add_stock(
-    batches: list[tuple[str, str, int, str | None]], session: sqlalchemy_orm.Session
-):
+def add_stock(batches: list[tuple[str, str, int, str | None]], test_client):
     for batch in batches:
-        session.execute(
-            text(
-                "INSERT INTO batches (reference, sku, _purchased_quantity, eta) "
-                "VALUES (:reference, :sku, :quantity, :eta)"
-            ),
-            {
-                "reference": batch[0],
-                "sku": batch[1],
-                "quantity": batch[2],
-                "eta": batch[3],
-            },
-        )
+        data = {
+            "reference": batch[0],
+            "sku": batch[1],
+            "quantity": batch[2],
+            "eta": batch[3],
+        }
+        test_client.post("/add_batch", json=data)
 
 
-def test_api_returns_allocation(flask_test_client, session):
+def test_api_returns_allocation(flask_test_client):
     sku = random_sku()
     other_sku = random_sku()
     early_batch, later_batch, other_batch = (
@@ -52,7 +42,7 @@ def test_api_returns_allocation(flask_test_client, session):
             (early_batch, sku, 100, today.isoformat()),
             (other_batch, other_sku, 100, None),
         ],
-        session,
+        flask_test_client,
     )
     data = {"order_id": random_order_id(), "sku": sku, "quantity": 1}
 
@@ -62,7 +52,7 @@ def test_api_returns_allocation(flask_test_client, session):
     assert response.json["batch_ref"] == early_batch
 
 
-def test_400_message_for_invalid_sku(flask_test_client, session):
+def test_400_message_for_invalid_sku(flask_test_client):
     sku = random_sku()
     order_id = random_order_id()
     data = {"order_id": order_id, "sku": sku, "quantity": 20}
@@ -73,12 +63,12 @@ def test_400_message_for_invalid_sku(flask_test_client, session):
     assert response.json["message"] == f"Invalid sku {sku}"
 
 
-def test_deallocate(flask_test_client, session):
+def test_deallocate(flask_test_client):
     sku = random_sku()
     order_1 = random_order_id()
     order_2 = random_order_id()
     batch = random_batch_ref()
-    add_stock([(batch, sku, 100, "2025-12-29")], session)
+    add_stock([(batch, sku, 100, "2025-12-29")], flask_test_client)
 
     response = flask_test_client.post(
         "/allocate", json={"order_id": order_1, "sku": sku, "quantity": 100}
@@ -106,3 +96,46 @@ def test_deallocate(flask_test_client, session):
     assert response.status_code == 201
     assert response.json["batch_ref"] == batch
     assert response.json["batch_ref"] == batch
+
+
+def test_add_batch_no_eta(flask_test_client):
+    reference = random_batch_ref()
+    sku = random_sku()
+    quantity = 10
+    data = {
+        "reference": reference,
+        "sku": sku,
+        "quantity": quantity,
+    }
+
+    response = flask_test_client.post("/add_batch", json=data)
+
+    assert response.status_code == 201
+    assert response.json == {
+        "batch": {
+            "reference": reference,
+            "sku": sku,
+            "available_quantity": quantity,
+            "eta": None,
+        }
+    }
+
+
+def test_add_batch_with_eta(flask_test_client):
+    reference = random_batch_ref()
+    sku = random_sku()
+    quantity = 10
+    today = datetime.date.today().isoformat()
+    data = {"reference": reference, "sku": sku, "quantity": quantity, "eta": today}
+
+    response = flask_test_client.post("/add_batch", json=data)
+
+    assert response.status_code == 201
+    assert response.json == {
+        "batch": {
+            "reference": reference,
+            "sku": sku,
+            "available_quantity": quantity,
+            "eta": today,
+        }
+    }
