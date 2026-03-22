@@ -23,14 +23,13 @@ def init_app(session_maker=None):
         session = get_session()
         repository = repositories.SQLAlchemyRepository(session)
         current_request = flask.request
-        line = models.OrderLine(
-            current_request.json["order_id"],
-            current_request.json["sku"],
-            current_request.json["quantity"],
-        )
+
+        order_id = current_request.json["order_id"]
+        sku = current_request.json["sku"]
+        quantity = current_request.json["quantity"]
 
         try:
-            batch_ref = services.allocate(line, repository, session)
+            batch_ref = services.allocate(order_id, sku, quantity, repository, session)
         except (models.OutOfStockError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 

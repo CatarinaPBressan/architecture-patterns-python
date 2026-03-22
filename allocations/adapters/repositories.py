@@ -1,4 +1,5 @@
 import abc
+import datetime
 
 from sqlalchemy import orm as sqlalchemy_orm
 from sqlalchemy import select
@@ -55,3 +56,7 @@ class FakeRepository(AbstractRepository):
 
     def list(self) -> list[models.Batch]:
         return list(self._batches)
+
+    @staticmethod
+    def for_batch(reference: str, sku: str, quantity: int, eta: datetime.date | None):
+        return FakeRepository([models.Batch(reference, sku, quantity, eta)])
