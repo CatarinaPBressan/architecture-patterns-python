@@ -13,7 +13,7 @@ def init_app(session_maker=None):
     app = flask.Flask(__name__)
 
     if not session_maker:
-        engine = sqlalchemy.create_engine(config.get_sqlite("app.sqlite"))
+        engine = sqlalchemy.create_engine(config.get_app_sqlite())
         session_maker = sqlalchemy_orm.sessionmaker(engine)
 
     get_session = session_maker
@@ -58,6 +58,8 @@ def init_app(session_maker=None):
 
 
 def init_flask():
+    engine = sqlalchemy.create_engine(config.get_app_sqlite(), echo=True)
+    allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
     _app = init_app()
 
