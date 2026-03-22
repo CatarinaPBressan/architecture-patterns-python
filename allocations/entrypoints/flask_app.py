@@ -48,9 +48,7 @@ def init_app(session_maker=None):
         quantity = current_request.json["quantity"]
 
         try:
-            batch_ref = services.deallocate(
-                order_id, sku, quantity, repository, session
-            )
+            batch_ref = services.deallocate(order_id, sku, quantity, repository, session)
         except (exceptions.UnallocatedError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 

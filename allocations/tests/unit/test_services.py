@@ -2,9 +2,8 @@ import datetime
 
 import pytest
 
-from allocations.adapters import repositories
 from allocations.domain import exceptions
-from allocations.service_layer import services
+from allocations.service_layer import services, unit_of_work
 
 
 class FakeSession:
@@ -15,103 +14,106 @@ class FakeSession:
 
 
 def test_returns_allocations():
-    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, None)
+    uow = unit_of_work.FakeUnitOfWork.for_batch("b1", "COMPLICATED-LAMP", 100, None)
 
-    result = services.allocate("o1", "COMPLICATED-LAMP", 10, repo, FakeSession())
+    result = services.allocate("o1", "COMPLICATED-LAMP", 10, uow)
 
     assert result == "b1"
 
 
 def test_not_enough_stock():
-    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 10, None)
+    uow = unit_of_work.FakeUnitOfWork.for_batch("b1", "COMPLICATED-LAMP", 10, None)
 
     with pytest.raises(exceptions.OutOfStockError, match="COMPLICATED-LAMP"):
-        services.allocate("o1", "COMPLICATED-LAMP", 100, repo, FakeSession())
+        services.allocate("o1", "COMPLICATED-LAMP", 100, uow)
 
 
 def test_error_for_invalid_sku():
-    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, None)
+    uow = unit_of_work.FakeUnitOfWork.for_batch("b1", "COMPLICATED-LAMP", 100, None)
 
     with pytest.raises(services.InvalidSKUError, match="NONEXISTENTSKU"):
-        services.allocate("o1", "NONEXISTENTSKU", 10, repo, FakeSession())
+        services.allocate("o1", "NONEXISTENTSKU", 10, uow)
 
 
 def test_commits():
-    repo = repositories.FakeRepository.for_batch("b1", "OMINOUS-MIRROR", 100, None)
-    session = FakeSession()
+    uow = unit_of_work.FakeUnitOfWork.for_batch("b1", "OMINOUS-MIRROR", 100, None)
 
-    services.allocate("o1", "OMINOUS-MIRROR", 10, repo, session)
+    services.allocate("o1", "OMINOUS-MIRROR", 10, uow)
 
-    assert session.commited is True
+    assert uow.commited is True
 
 
 def test_deallocate_frees_available_quantity():
-    repo = repositories.FakeRepository([])
-    session = FakeSession()
-    batch = services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
+    uow = unit_of_work.FakeUnitOfWork()
+    batch = services.add_batch("b1", "BLUE-PLINTH", 100, None, uow)
 
-    services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
+    services.allocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch.available_quantity == 90
 
-    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch.available_quantity == 100
 
 
 def test_deallocate_deallocates_from_correct_batch():
-    repo = repositories.FakeRepository([])
-    session = FakeSession()
-    batch_1 = services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
-    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-    batch_2 = services.add_batch(
-        "b2",
-        "BLUE-PLINTH",
-        100,
-        tomorrow,
-        repo,
-        session,
-    )
+    uow = unit_of_work.FakeUnitOfWork()
 
-    services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
+    batch_1 = services.add_batch("b1", "BLUE-PLINTH", 100, None, uow)
+    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+    batch_2 = services.add_batch("b2", "BLUE-PLINTH", 100, tomorrow, uow)
+
+    services.allocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch_1.available_quantity == 90
     assert batch_2.available_quantity == 100
 
-    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch_1.available_quantity == 100
     assert batch_2.available_quantity == 100
 
 
 def test_deallocate_deallocates_from_matching_sku_batch():
-    repo = repositories.FakeRepository([])
-    session = FakeSession()
-    batch_1 = services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
-    batch_2 = services.add_batch("b2", "RED-SOFA", 100, None, repo, session)
+    uow = unit_of_work.FakeUnitOfWork()
 
-    services.allocate("o1", "BLUE-PLINTH", 10, repo, session)
+    batch_1 = services.add_batch("b1", "BLUE-PLINTH", 100, None, uow)
+    batch_2 = services.add_batch("b2", "RED-SOFA", 100, None, uow)
+
+    services.allocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch_1.available_quantity == 90
     assert batch_2.available_quantity == 100
 
-    services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
+    services.deallocate("o1", "BLUE-PLINTH", 10, uow)
 
     assert batch_1.available_quantity == 100
     assert batch_2.available_quantity == 100
 
 
 def test_trying_to_deallocate_unallocated_batch():
-    repo = repositories.FakeRepository.for_batch("b1", "BLUE-PLINTH", 100, None)
-    session = FakeSession()
+    uow = unit_of_work.FakeUnitOfWork.for_batch("b1", "BLUE-PLINTH", 100, None)
 
     with pytest.raises(exceptions.UnallocatedError, match="BLUE-PLINTH"):
-        services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
+        services.deallocate("o1", "BLUE-PLINTH", 10, uow)
 
 
 def test_trying_to_deallocate_non_existing_batch():
-    repo = repositories.FakeRepository([])
-    session = FakeSession()
+    uow = unit_of_work.FakeUnitOfWork()
 
     with pytest.raises(services.InvalidSKUError, match="BLUE-PLINTH"):
-        services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
+        services.deallocate("o1", "BLUE-PLINTH", 10, uow)
+
+
+def test_add_batch():
+    uow = unit_of_work.FakeUnitOfWork()
+    services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, uow)
+    assert uow.batches.get("b1") is not None
+    assert uow.commited
+
+
+def test_allocation_returns_allocation():
+    uow = unit_of_work.FakeUnitOfWork()
+    services.add_batch("b1", "COMPLICATED-LAMP", 100, None, uow)
+    result = services.allocate("o1", "COMPLICATED-LAMP", 10, uow)
+    assert result == "b1"
