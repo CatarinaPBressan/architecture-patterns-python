@@ -1,6 +1,8 @@
 import dataclasses
 import datetime
 
+from allocations.domain import exceptions
+
 
 @dataclasses.dataclass(unsafe_hash=True)
 class OrderLine:
@@ -69,7 +71,7 @@ def allocate(line: OrderLine, batches: list[Batch]) -> str:
     try:
         batch = next(_batch for _batch in sorted(batches) if _batch.can_allocate(line))
     except StopIteration as e:
-        raise OutOfStockError(f"Out of stock for sku {line.sku}") from e
+        raise exceptions.OutOfStockError(f"Out of stock for sku {line.sku}") from e
 
     batch.allocate(line)
     return batch.reference
@@ -81,15 +83,9 @@ def deallocate(line: OrderLine, batches: list[Batch]) -> str:
             _batch for _batch in sorted(batches) if _batch.can_deallocate(line)
         )
     except StopIteration as e:
-        raise UnallocatedError(f"No allocations found for sku {line.sku}") from e
+        raise exceptions.UnallocatedError(
+            f"No allocations found for sku {line.sku}"
+        ) from e
 
     batch.deallocate(line)
     return batch.reference
-
-
-class UnallocatedError(Exception):
-    pass
-
-
-class OutOfStockError(Exception):
-    pass

@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from allocations.adapters import repositories
-from allocations.domain import models
+from allocations.domain import exceptions, models
 from allocations.service_layer import services
 
 
@@ -15,8 +15,7 @@ class FakeSession:
 
 
 def test_returns_allocations():
-    batch = models.Batch("b1", "COMPLICATED-LAMP", 100)
-    repo = repositories.FakeRepository([batch])
+    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, None)
 
     result = services.allocate("o1", "COMPLICATED-LAMP", 10, repo, FakeSession())
 
@@ -24,24 +23,21 @@ def test_returns_allocations():
 
 
 def test_not_enough_stock():
-    batch = models.Batch("b1", "COMPLICATED-LAMP", 10)
-    repo = repositories.FakeRepository([batch])
+    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 10, None)
 
-    with pytest.raises(models.OutOfStockError, match="COMPLICATED-LAMP"):
+    with pytest.raises(exceptions.OutOfStockError, match="COMPLICATED-LAMP"):
         services.allocate("o1", "COMPLICATED-LAMP", 100, repo, FakeSession())
 
 
 def test_error_for_invalid_sku():
-    batch = models.Batch("b1", "COMPLICATED-LAMP", 100)
-    repo = repositories.FakeRepository([batch])
+    repo = repositories.FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, None)
 
     with pytest.raises(services.InvalidSKUError, match="NONEXISTENTSKU"):
         services.allocate("o1", "NONEXISTENTSKU", 10, repo, FakeSession())
 
 
 def test_commits():
-    batch = models.Batch("b1", "OMINOUS-MIRROR", 100)
-    repo = repositories.FakeRepository([batch])
+    repo = repositories.FakeRepository.for_batch("b1", "OMINOUS-MIRROR", 100, None)
     session = FakeSession()
 
     services.allocate("o1", "OMINOUS-MIRROR", 10, repo, session)
@@ -106,11 +102,10 @@ def test_deallocate_deallocates_from_matching_sku_batch():
 
 
 def test_trying_to_deallocate_unallocated_batch():
-    repo = repositories.FakeRepository([])
+    repo = repositories.FakeRepository.for_batch("b1", "BLUE-PLINTH", 100, None)
     session = FakeSession()
-    services.add_batch("b1", "BLUE-PLINTH", 100, None, repo, session)
 
-    with pytest.raises(models.UnallocatedError, match="BLUE-PLINTH"):
+    with pytest.raises(exceptions.UnallocatedError, match="BLUE-PLINTH"):
         services.deallocate("o1", "BLUE-PLINTH", 10, repo, session)
 
 

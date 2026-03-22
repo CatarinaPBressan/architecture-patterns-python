@@ -5,7 +5,7 @@ from sqlalchemy import orm as sqlalchemy_orm
 from allocations import config
 from allocations.adapters import orm as allocations_orm
 from allocations.adapters import repositories
-from allocations.domain import models
+from allocations.domain import exceptions, models
 from allocations.service_layer import services
 
 
@@ -30,7 +30,7 @@ def init_app(session_maker=None):
 
         try:
             batch_ref = services.allocate(order_id, sku, quantity, repository, session)
-        except (models.OutOfStockError, services.InvalidSKUError) as e:
+        except (exceptions.OutOfStockError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 
         return flask.jsonify({"batch_ref": batch_ref}), 201
@@ -48,7 +48,7 @@ def init_app(session_maker=None):
             batch_ref = services.deallocate(
                 order_id, sku, quantity, repository, session
             )
-        except (models.UnallocatedError, services.InvalidSKUError) as e:
+        except (exceptions.UnallocatedError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 
         return flask.jsonify({"batch_ref": batch_ref}), 200
