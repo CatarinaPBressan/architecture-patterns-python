@@ -10,7 +10,8 @@
     "ms-python.black-formatter",
     "tamasfe.even-better-toml",
     "ms-python.python",
-    "ms-python.debugpy"
+    "ms-python.debugpy",
+    "ms-python.flake8"
   ],
   // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
   "unwantedRecommendations": []
