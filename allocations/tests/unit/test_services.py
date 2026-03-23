@@ -45,15 +45,20 @@ def test_commits():
 
 def test_deallocate_frees_available_quantity():
     uow = unit_of_work.FakeUnitOfWork()
-    batch = services.add_batch("b1", "BLUE-PLINTH", 100, None, uow)
+    services.add_batch("b1", "BLUE-PLINTH", 100, None, uow)
 
     services.allocate("o1", "BLUE-PLINTH", 10, uow)
 
-    assert batch.available_quantity == 90
+    # Don't like this
+    with uow:
+        batch = uow.batches.get("b1")
+        assert batch.available_quantity == 90
 
     services.deallocate("o1", "BLUE-PLINTH", 10, uow)
 
-    assert batch.available_quantity == 100
+    with uow:
+        batch = uow.batches.get("b1")
+        assert batch.available_quantity == 100
 
 
 def test_deallocate_deallocates_from_correct_batch():

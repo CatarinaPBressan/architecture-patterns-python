@@ -6,9 +6,8 @@ from sqlalchemy import orm as sqlalchemy_orm
 
 from allocations import config
 from allocations.adapters import orm as allocations_orm
-from allocations.adapters import repositories
 from allocations.domain import exceptions
-from allocations.service_layer import services
+from allocations.service_layer import services, unit_of_work
 
 
 def init_app(session_maker=None):
@@ -22,8 +21,6 @@ def init_app(session_maker=None):
 
     @app.route("/allocate", methods=["POST"])
     def allocate():
-        session = get_session()
-        repository = repositories.SQLAlchemyRepository(session)
         current_request = flask.request
 
         order_id = current_request.json["order_id"]
@@ -31,7 +28,8 @@ def init_app(session_maker=None):
         quantity = current_request.json["quantity"]
 
         try:
-            batch_ref = services.allocate(order_id, sku, quantity, repository, session)
+            uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+            batch_ref = services.allocate(order_id, sku, quantity, uow)
         except (exceptions.OutOfStockError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 
@@ -39,8 +37,6 @@ def init_app(session_maker=None):
 
     @app.route("/deallocate", methods=["POST"])
     def deallocate():
-        session = get_session()
-        repository = repositories.SQLAlchemyRepository(session)
         current_request = flask.request
 
         order_id = current_request.json["order_id"]
@@ -48,7 +44,8 @@ def init_app(session_maker=None):
         quantity = current_request.json["quantity"]
 
         try:
-            batch_ref = services.deallocate(order_id, sku, quantity, repository, session)
+            uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+            batch_ref = services.deallocate(order_id, sku, quantity, uow)
         except (exceptions.UnallocatedError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
 
@@ -56,8 +53,6 @@ def init_app(session_maker=None):
 
     @app.route("/add_batch", methods=["POST"])
     def add_batch():
-        session = get_session()
-        repository = repositories.SQLAlchemyRepository(session)
         current_request = flask.request
 
         reference = current_request.json["reference"]
@@ -67,16 +62,17 @@ def init_app(session_maker=None):
         if eta is not None:
             eta = datetime.date.fromisoformat(eta)
 
-        batch = services.add_batch(reference, sku, quantity, eta, repository, session)
+        uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+        reference = services.add_batch(reference, sku, quantity, eta, uow)
 
         return (
             flask.jsonify(
                 {
                     "batch": {
-                        "reference": batch.reference,
-                        "sku": batch.sku,
-                        "available_quantity": batch.available_quantity,
-                        "eta": batch.eta.isoformat() if batch.eta else None,
+                        "reference": reference,
+                        # "sku": batch.sku,
+                        # "available_quantity": batch.available_quantity,
+                        # "eta": batch.eta.isoformat() if batch.eta else None,
                     }
                 }
             ),
