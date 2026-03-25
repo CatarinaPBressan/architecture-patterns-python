@@ -111,8 +111,8 @@ def test_add_batch(flask_test_client):
     assert response.json == {
         "batch": {
             "reference": reference,
-            # "sku": sku,
-            # "available_quantity": quantity,
-            # "eta": today,
+            "sku": sku,
+            "available_quantity": quantity,
+            "eta": today,
         }
     }

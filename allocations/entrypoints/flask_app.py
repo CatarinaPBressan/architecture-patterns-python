@@ -63,16 +63,16 @@ def init_app(session_maker=None):
             eta = datetime.date.fromisoformat(eta)
 
         uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
-        reference = services.add_batch(reference, sku, quantity, eta, uow)
+        batch = services.add_batch(reference, sku, quantity, eta, uow)
 
         return (
             flask.jsonify(
                 {
                     "batch": {
-                        "reference": reference,
-                        # "sku": batch.sku,
-                        # "available_quantity": batch.available_quantity,
-                        # "eta": batch.eta.isoformat() if batch.eta else None,
+                        "reference": batch.reference,
+                        "sku": batch.sku,
+                        "available_quantity": batch.available_quantity,
+                        "eta": batch.eta.isoformat() if batch.eta else None,
                     }
                 }
             ),

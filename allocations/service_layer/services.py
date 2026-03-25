@@ -47,9 +47,9 @@ def add_batch(
     purchased_quantity: int,
     eta: datetime.date | None,
     uow: unit_of_work.AbstractUnitOfWork,
-) -> str:
+) -> models.Batch:
     with uow:
         batch = models.Batch(reference, sku, purchased_quantity, eta)
         uow.batches.add(batch)
         uow.commit()
-    return reference
+    return batch
