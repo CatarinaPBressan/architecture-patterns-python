@@ -11,7 +11,7 @@ class AbstractUnitOfWork(abc.ABC):
     batches: repositories.AbstractRepository
 
     def __enter__(self):
-        pass
+        return self
 
     def __exit__(self, exc_type, exc, tb):
         self.rollback()

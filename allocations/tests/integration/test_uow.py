@@ -47,7 +47,7 @@ def test_uow_can_retrieve_a_batch_and_allocate_to_it(make_session):
     insert_batch("batch1", "HIPSTER-WORKBENCH", 100, None, session)
     session.commit()
 
-    with (uow := unit_of_work.SqlAlchemyUnitOfWork(make_session)):
+    with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
         batch = uow.batches.get("batch1")
         line = models.OrderLine("o1", "HIPSTER-WORKBENCH", 10)
         batch.allocate(line)
@@ -58,7 +58,7 @@ def test_uow_can_retrieve_a_batch_and_allocate_to_it(make_session):
 
 
 def test_rolls_back_uncommited_work_by_default(make_session):
-    with (uow := unit_of_work.SqlAlchemyUnitOfWork(make_session)):
+    with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
         insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
 
     session = make_session()
@@ -71,7 +71,7 @@ def test_rolls_back_on_error(make_session):
         pass
 
     with pytest.raises(TestException):
-        with (uow := unit_of_work.SqlAlchemyUnitOfWork(make_session)):
+        with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
             insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
             raise TestException
 
