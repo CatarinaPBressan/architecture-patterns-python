@@ -20,9 +20,16 @@ batches = schema.Table(
     mapper_registry.metadata,
     sqlalchemy.Column("id", types.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column("reference", types.String(255)),
-    sqlalchemy.Column("sku", types.String(255)),
+    sqlalchemy.Column("sku", types.String(255), schema.ForeignKey("products.sku")),
     sqlalchemy.Column("eta", types.Date, nullable=True),
     sqlalchemy.Column("_purchased_quantity", types.Integer),
+)
+
+products = schema.Table(
+    "products",
+    mapper_registry.metadata,
+    sqlalchemy.Column("id", types.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column("sku", types.String(255)),
 )
 
 
@@ -31,7 +38,10 @@ def start_mappers():
     mapper_registry.map_imperatively(
         models.Batch,
         batches,
-        properties={
-            "_allocations": orm.relationship(models.OrderLine, collection_class=set)
-        },
+        properties={"_allocations": orm.relationship(models.OrderLine, collection_class=set)},
+    )
+    mapper_registry.map_imperatively(
+        models.Product,
+        products,
+        properties={"batches": orm.relationship(models.Batch, collection_class=list)},
     )

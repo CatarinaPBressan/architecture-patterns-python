@@ -79,14 +79,9 @@ class SQLAlchemyProductRepository(AbstractProductRepository):
         self.session = session
 
     def get(self, sku: str) -> models.Product | None:
-        batches = list(
-            self.session.scalars(select(models.Batch).where(allocations_orm.batches.c.sku == sku))
+        return self.session.scalar(
+            select(models.Product).where(allocations_orm.products.c.sku == sku)
         )
-
-        if not batches:
-            return None
-
-        return models.Product(sku, batches)
 
     def add(self, product: models.Product) -> None:
         pass
