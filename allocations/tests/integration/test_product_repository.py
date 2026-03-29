@@ -80,3 +80,29 @@ def test_get_product_not_existing(session, random_sku):
     product_repository = repositories.SQLAlchemyProductRepository(session)
 
     assert product_repository.get(random_sku()) is None
+
+
+def test_repository_can_save_a_product_with_batches_and_allocations(
+    session, random_batch_ref, random_sku, random_order_id
+):
+    batch_ref = random_batch_ref()
+    sku = random_sku()
+    order_id = random_order_id()
+    order_line = models.OrderLine(order_id, sku, 1)
+    batch = models.Batch(batch_ref, sku, 10)
+    batch._allocations.add(order_line)
+    product = models.Product(sku, [batch])
+    product_repository = repositories.SQLAlchemyProductRepository(session)
+
+    product_repository.add(product)
+    session.commit()
+
+    product_rows = list(session.execute(text('SELECT sku FROM "products"')))
+    assert product_rows == [(sku,)]
+
+    batches_rows = list(session.execute(text('SELECT id, sku FROM "batches"')))
+    batch_id = batches_rows[0][0]
+    assert batches_rows == [(batch_id, sku)]
+
+    order_lines_rows = list(session.execute(text('SELECT sku, batch_id FROM "order_lines"')))
+    assert order_lines_rows == [(sku, batch_id)]

@@ -84,4 +84,4 @@ class SQLAlchemyProductRepository(AbstractProductRepository):
         )
 
     def add(self, product: models.Product) -> None:
-        pass
+        self.session.add(product)
