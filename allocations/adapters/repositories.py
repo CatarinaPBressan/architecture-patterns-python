@@ -60,3 +60,33 @@ class FakeRepository(AbstractRepository):
     @staticmethod
     def for_batch(reference: str, sku: str, quantity: int, eta: datetime.date | None):
         return FakeRepository([models.Batch(reference, sku, quantity, eta)])
+
+
+class AbstractProductRepository(abc.ABC):
+    @abc.abstractmethod
+    def add(self, product: models.Product) -> None:
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def get(self, sku: str) -> models.Product | None:
+        raise NotImplementedError
+
+
+class SQLAlchemyProductRepository(AbstractProductRepository):
+    session: sqlalchemy_orm.Session
+
+    def __init__(self, session: sqlalchemy_orm.Session) -> None:
+        self.session = session
+
+    def get(self, sku: str) -> models.Product | None:
+        batches = list(
+            self.session.scalars(select(models.Batch).where(allocations_orm.batches.c.sku == sku))
+        )
+
+        if not batches:
+            return None
+
+        return models.Product(sku, batches)
+
+    def add(self, product: models.Product) -> None:
+        pass
