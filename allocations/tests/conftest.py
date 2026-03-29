@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 import sqlalchemy
 import sqlalchemy.orm as sqlalchemy_orm
@@ -30,3 +32,22 @@ def session(make_session):
 def flask_test_client(make_session):
     app = flask_app.init_app(make_session)
     return app.test_client()
+
+
+def _random_uuid4():
+    return str(uuid.uuid4())[:8]
+
+
+@pytest.fixture
+def random_sku():
+    return lambda: f"SKU {_random_uuid4()}"
+
+
+@pytest.fixture
+def random_batch_ref():
+    return lambda: f"BATCH {_random_uuid4()}"
+
+
+@pytest.fixture
+def random_order_id():
+    return lambda: f"ORDER {_random_uuid4()}"
