@@ -8,34 +8,31 @@ class InvalidSKUError(Exception):
     pass
 
 
-def is_valid_sku(sku: str, batches: list[models.Batch]) -> bool:
-    return sku in [batch.sku for batch in batches]
-
-
-def allocate(order_id: str, sku: str, quantity: int, uow: unit_of_work.AbstractUnitOfWork) -> str:
+def allocate(
+    order_id: str, sku: str, quantity: int, uow: unit_of_work.AbstractProductUnitOfWork
+) -> str:
     line = models.OrderLine(order_id, sku, quantity)
     with uow:
-        batches = uow.batches.list()
-
-        if not is_valid_sku(line.sku, batches):
+        product = uow.products.get(sku)
+        if product is None:
             raise InvalidSKUError(f"Invalid sku {line.sku}")
 
-        batch_ref = models.allocate(line, batches)
+        batch_ref = product.allocate(line)
         uow.commit()
 
     return batch_ref
 
 
-def deallocate(order_id: str, sku: str, quantity: int, uow: unit_of_work.AbstractUnitOfWork) -> str:
+def deallocate(
+    order_id: str, sku: str, quantity: int, uow: unit_of_work.AbstractProductUnitOfWork
+) -> str:
     line = models.OrderLine(order_id, sku, quantity)
-
     with uow:
-        batches = uow.batches.list()
-
-        if not is_valid_sku(line.sku, batches):
+        product = uow.products.get(sku)
+        if product is None:
             raise InvalidSKUError(f"Invalid sku {line.sku}")
 
-        batch_ref = models.deallocate(line, batches)
+        batch_ref = product.deallocate(line)
         uow.commit()
 
     return batch_ref
@@ -46,10 +43,14 @@ def add_batch(
     sku: str,
     purchased_quantity: int,
     eta: datetime.date | None,
-    uow: unit_of_work.AbstractUnitOfWork,
+    uow: unit_of_work.AbstractProductUnitOfWork,
 ) -> models.Batch:
     with uow:
+        product = uow.products.get(sku)
+        if product is None:
+            product = models.Product(sku, [])
+            uow.products.add(product)
         batch = models.Batch(reference, sku, purchased_quantity, eta)
-        uow.batches.add(batch)
+        product.batches.append(batch)
         uow.commit()
     return batch
