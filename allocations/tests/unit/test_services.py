@@ -140,12 +140,15 @@ def test_trying_to_deallocate_non_existing_batch():
 
 
 def test_add_batch():
-    uow = unit_of_work.FakeUnitOfWork()
+    uow = FakeProductUnitOfWork()
     batch = services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, uow)
     assert batch.reference == "b1"
     assert batch.sku == "CRUNCHY-ARMCHAIR"
     assert batch.available_quantity == 100
     assert batch.eta is None
+
+    product = uow.products.get("CRUNCHY-ARMCHAIR")
+    assert product
 
     assert uow.batches.get("b1") is not None
     assert uow.commited
