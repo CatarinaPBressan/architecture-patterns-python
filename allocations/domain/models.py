@@ -89,11 +89,19 @@ def deallocate(line: OrderLine, batches: list[Batch]) -> str:
 
 class Product:
     sku: str
-    batches: list[Batch]
+    batches: list[Batch]  # TODO: change to set
 
     def __init__(self, sku: str, batches: list[Batch]) -> None:
         self.sku = sku
         self.batches = batches
+
+    def __hash__(self) -> int:
+        return hash(self.sku)
+
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Product):
+            return False
+        return self.sku == value.sku
 
     def allocate(self, line: OrderLine) -> str:
         try:
