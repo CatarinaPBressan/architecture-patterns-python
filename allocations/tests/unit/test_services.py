@@ -49,7 +49,6 @@ def test_deallocate_frees_available_quantity():
 
     services.allocate("o1", "BLUE-PLINTH", 10, uow)
 
-    # Don't like this
     with uow:
         batch = uow.batches.get("b1")
         assert batch.available_quantity == 90

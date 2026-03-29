@@ -79,13 +79,36 @@ def allocate(line: OrderLine, batches: list[Batch]) -> str:
 
 def deallocate(line: OrderLine, batches: list[Batch]) -> str:
     try:
-        batch = next(
-            _batch for _batch in sorted(batches) if _batch.can_deallocate(line)
-        )
+        batch = next(_batch for _batch in sorted(batches) if _batch.can_deallocate(line))
     except StopIteration as e:
-        raise exceptions.UnallocatedError(
-            f"No allocations found for sku {line.sku}"
-        ) from e
+        raise exceptions.UnallocatedError(f"No allocations found for sku {line.sku}") from e
 
     batch.deallocate(line)
     return batch.reference
+
+
+class Product:
+    sku: str
+    batches: list[Batch]
+
+    def __init__(self, sku: str, batches: list[Batch]) -> None:
+        self.sku = sku
+        self.batches = batches
+
+    def allocate(self, line: OrderLine) -> str:
+        try:
+            batch = next(_batch for _batch in sorted(self.batches) if _batch.can_allocate(line))
+        except StopIteration as e:
+            raise exceptions.OutOfStockError(f"Out of stock for sku {line.sku}") from e
+
+        batch.allocate(line)
+        return batch.reference
+
+    def deallocate(self, line: OrderLine) -> str:
+        try:
+            batch = next(_batch for _batch in sorted(self.batches) if _batch.can_deallocate(line))
+        except StopIteration as e:
+            raise exceptions.UnallocatedError(f"No allocations found for sku {line.sku}") from e
+
+        batch.deallocate(line)
+        return batch.reference

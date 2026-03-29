@@ -13,5 +13,6 @@
     "editor.formatOnPaste": true,
     "editor.formatOnSaveMode": "file"
   },
+  "python.languageServer": "Pylance",
   "isort.args": ["--profile", "black", "--line-length", "100", "--float-to-top"]
 }
