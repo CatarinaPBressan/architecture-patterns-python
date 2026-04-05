@@ -91,9 +91,10 @@ class Product:
     sku: str
     batches: list[Batch]  # TODO: change to set
 
-    def __init__(self, sku: str, batches: list[Batch]) -> None:
+    def __init__(self, sku: str, batches: list[Batch], version_number: int = 0) -> None:
         self.sku = sku
         self.batches = batches
+        self.version_number = version_number
 
     def __hash__(self) -> int:
         return hash(self.sku)
@@ -110,6 +111,7 @@ class Product:
             raise exceptions.OutOfStockError(f"Out of stock for sku {line.sku}") from e
 
         batch.allocate(line)
+        self.version_number += 1
         return batch.reference
 
     def deallocate(self, line: OrderLine) -> str:

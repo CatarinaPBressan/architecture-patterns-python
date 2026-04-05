@@ -28,6 +28,28 @@ def insert_batch(
     )
 
 
+def insert_batch_with_product(
+    reference: str,
+    sku: str,
+    quantity: int,
+    eta: datetime.date | None,
+    version_number: int,
+    session: sqlalchemy_orm.Session,
+) -> None:
+    session.execute(
+        text(
+            "INSERT INTO batches (reference, sku, eta, _purchased_quantity)"
+            "VALUES (:reference, :sku, NULL, 10)"
+        ),
+        {"reference": reference, "sku": sku, "_purchased_quantity": quantity, "eta": eta},
+    )
+
+    session.execute(
+        text("INSERT INTO products (sku, version_number)" "VALUES (:sku, :version_number)"),
+        {"sku": sku, "version_number": version_number},
+    )
+
+
 def get_allocated_batch_ref(order_id: str, sku: str, session: sqlalchemy_orm.Session) -> str:
     params = {"order_id": order_id, "sku": sku}
     order_line_id: int = session.scalar(
@@ -87,15 +109,14 @@ def test_rolls_back_on_error(make_session):
     assert rows == []
 
 
-def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], make_session):
+def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], uow):
     line = models.OrderLine(order_id, sku, 10)
     try:
-        with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
-            product = uow.products.get(sku)
-            assert product
-            product.allocate(line)
-            time.sleep(0.2)
-            uow.commit()
+        product = uow.products.get(sku)
+        assert product
+        product.allocate(line)
+        time.sleep(0.2)
+        uow.commit()
     except Exception as e:
         print(traceback.format_exc())
         exceptions.append(e)
@@ -107,40 +128,40 @@ def test_concurrent_updates_to_version_are_not_allowed(
     sku = random_sku()
     batch_ref = random_batch_ref()
 
-    session: sqlalchemy_orm.Session = make_session()
+    with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
+        session = uow.session
+        insert_batch_with_product(batch_ref, sku, 100, None, 1, session)
+        session.commit()
 
-    insert_batch(batch_ref, sku, 100, None, session)
-    session.commit()
+        order_id_1 = random_order_id()
+        order_id_2 = random_order_id()
 
-    order_id_1 = random_order_id()
-    order_id_2 = random_order_id()
+        exceptions: list[Exception] = []
 
-    exceptions: list[Exception] = []
+        try_to_allocate_1 = lambda: try_to_allocate(order_id_1, sku, exceptions, uow)  # noqa: E731
+        try_to_allocate_2 = lambda: try_to_allocate(order_id_2, sku, exceptions, uow)  # noqa: E731
 
-    try_to_allocate_1 = lambda: try_to_allocate(order_id_1, sku, exceptions, make_session)
-    try_to_allocate_2 = lambda: try_to_allocate(order_id_2, sku, exceptions, make_session)
+        thread_1 = threading.Thread(target=try_to_allocate_1)
+        thread_2 = threading.Thread(target=try_to_allocate_2)
 
-    thread_1 = threading.Thread(target=try_to_allocate_1)
-    thread_2 = threading.Thread(target=try_to_allocate_2)
+        thread_1.start()
+        thread_2.start()
+        thread_1.join()
+        thread_2.join()
 
-    thread_1.start()
-    thread_2.start()
-    thread_1.join()
-    thread_2.join()
-
-    version = session.scalar(
-        text("SELECT version_number FROM products WHERE sku=:sku"), {"sku": sku}
-    )
-    assert version == 2
-
-    exception = exceptions[0]
-    print(str(exception))
-
-    orders = list(
-        session.scalar(
-            text("SELECT id FROM order_lines WHERE sku=:sku"),
-            {"sku": sku},
+        version = session.scalar(
+            text("SELECT version_number FROM products WHERE sku=:sku"), {"sku": sku}
         )
-    )
+        assert version == 2
 
-    assert len(orders) == 1
+        exception = exceptions[0]
+        print(str(exception))
+
+        orders = list(
+            session.scalar(
+                text("SELECT id FROM order_lines WHERE sku=:sku"),
+                {"sku": sku},
+            )
+        )
+
+        assert len(orders) == 1
