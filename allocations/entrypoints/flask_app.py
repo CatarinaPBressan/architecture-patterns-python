@@ -28,7 +28,7 @@ def init_app(session_maker=None):
         quantity = current_request.json["quantity"]
 
         try:
-            uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+            uow = unit_of_work.SQLAlchemyProductUnitOfWork(get_session)
             batch_ref = services.allocate(order_id, sku, quantity, uow)
         except (exceptions.OutOfStockError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
@@ -44,7 +44,7 @@ def init_app(session_maker=None):
         quantity = current_request.json["quantity"]
 
         try:
-            uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+            uow = unit_of_work.SQLAlchemyProductUnitOfWork(get_session)
             batch_ref = services.deallocate(order_id, sku, quantity, uow)
         except (exceptions.UnallocatedError, services.InvalidSKUError) as e:
             return flask.jsonify({"message": str(e)}), 400
@@ -62,7 +62,7 @@ def init_app(session_maker=None):
         if eta is not None:
             eta = datetime.date.fromisoformat(eta)
 
-        uow = unit_of_work.SqlAlchemyUnitOfWork(get_session)
+        uow = unit_of_work.SQLAlchemyProductUnitOfWork(get_session)
         batch = services.add_batch(reference, sku, quantity, eta, uow)
 
         return (

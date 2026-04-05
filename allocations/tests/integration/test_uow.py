@@ -42,23 +42,27 @@ def get_allocated_batch_ref(order_id: str, sku: str, session: sqlalchemy_orm.Ses
     return batchref
 
 
-def test_uow_can_retrieve_a_batch_and_allocate_to_it(make_session):
-    session: sqlalchemy_orm.Session = make_session()
-    insert_batch("batch1", "HIPSTER-WORKBENCH", 100, None, session)
-    session.commit()
-
-    with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
-        batch = uow.batches.get("batch1")
-        line = models.OrderLine("o1", "HIPSTER-WORKBENCH", 10)
-        batch.allocate(line)
+def test_uow_can_retrieve_a_product_and_allocate_to_it(make_session):
+    with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
+        uow.products.add(
+            models.Product("HIPSTER-WORKBENCH", [models.Batch("batch1", "HIPSTER-WORKBENCH", 100)])
+        )
         uow.commit()
 
-    batch_ref = get_allocated_batch_ref("o1", "HIPSTER-WORKBENCH", session)
+    with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
+        product = uow.products.get("HIPSTER-WORKBENCH")
+
+        assert product
+
+        line = models.OrderLine("o1", "HIPSTER-WORKBENCH", 10)
+        batch_ref = product.allocate(line)
+        uow.commit()
+
     assert batch_ref == "batch1"
 
 
-def test_rolls_back_uncommited_work_by_default(make_session):
-    with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
+def test_uow_rolls_back_uncommited_work_by_default(make_session):
+    with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
         insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
 
     session = make_session()
@@ -71,7 +75,7 @@ def test_rolls_back_on_error(make_session):
         pass
 
     with pytest.raises(TestException):
-        with unit_of_work.SqlAlchemyUnitOfWork(make_session) as uow:
+        with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
             insert_batch("batch1", "MEDIUM-PLINTH", 100, None, uow.session)
             raise TestException
 

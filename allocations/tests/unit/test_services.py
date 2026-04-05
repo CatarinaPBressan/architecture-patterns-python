@@ -17,7 +17,10 @@ class FakeProductRepository(repositories.AbstractProductRepository):
         self._products.add(product)
 
     def get(self, sku: str):
-        return next(p for p in self._products if p.sku == sku)
+        try:
+            return next(p for p in self._products if p.sku == sku)
+        except StopIteration:
+            return None
 
 
 class FakeProductUnitOfWork(unit_of_work.AbstractProductUnitOfWork):
@@ -149,8 +152,8 @@ def test_add_batch():
 
     product = uow.products.get("CRUNCHY-ARMCHAIR")
     assert product
+    assert batch in product.batches
 
-    assert uow.batches.get("b1") is not None
     assert uow.commited
 
 
