@@ -5,13 +5,14 @@ description = ""
 authors = [
     { name = "Catarina Bressan", email = "catarina@catarinapbressan.org" },
 ]
-license = { text = "CC BY-NC-ND 4.0" }
+license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "flask (>=3.1.3,<4.0.0)",
     "sqlalchemy (>=2.0.48,<3.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
+    "psycopg[binary] (>=3.3.3,<4.0.0)",
 ]
 
 [dependency-groups]
@@ -20,6 +21,7 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "black (>=26.3.1,<27.0.0)",
     "flake8 (>=7.3.0,<8.0.0)",
+    "pytest-asyncio (>=1.3.0,<2.0.0)",
 ]
 
 
@@ -29,3 +31,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

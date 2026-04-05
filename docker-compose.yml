@@ -1,0 +1,10 @@
+services:
+  postgres:
+    image: postgres:18.3
+    environment:
+      - POSTGRES_USER=allocations
+      - POSTGRES_PASSWORD=abc123
+    ports:
+      - 5432:5432
+    volumes:
+      - ~/.postgres:/var/lib/postgresql
