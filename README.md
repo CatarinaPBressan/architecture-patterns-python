@@ -2,7 +2,7 @@
 
 This repository is inspired by the book _Architecture Patterns with Python_ by Harry J.W. Percival and Bob Gregory (O'Reilly).
 
-Link to the book: [Architecture Patterns with Python — O'Reilly](https://www.oreilly.com/library/view/architecture-patterns-with-python/9781492052203/)
+~~Link to the book: [Architecture Patterns with Python — O'Reilly](https://www.oreilly.com/library/view/architecture-patterns-with-python/9781492052203/)~~
 
 About this project
 ------------------
