@@ -3,6 +3,7 @@ from sqlalchemy import orm as sqlalchemy_orm
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from allocations import config
 from allocations.adapters import orm as allocations_orm
 from allocations.domain import models
 
@@ -57,14 +58,12 @@ def test_orderline_mapper_can_save_lines(session: sqlalchemy_orm.Session):
 
 
 async def test_async_postgres():
-    cs = "postgresql+psycopg://allocations:abc123@localhost:5432/allocations"
-    engine = create_async_engine(cs)
+    engine = create_async_engine(config.get_postgres())
     async with engine.connect() as connection:
         assert await connection.scalar(text("SELECT 1")) == 1
 
 
 def test_postgres():
-    cs = "postgresql+psycopg://allocations:abc123@localhost:5432/allocations"
-    engine = create_engine(cs)
+    engine = create_engine(config.get_postgres())
     with engine.connect() as connection:
         assert connection.scalar(text("SELECT 1")) == 1
