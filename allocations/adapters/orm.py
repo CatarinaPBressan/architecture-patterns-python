@@ -30,7 +30,7 @@ products = schema.Table(
     mapper_registry.metadata,
     sqlalchemy.Column("id", types.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column("sku", types.String(255), unique=True),
-    sqlalchemy.Column("version_number", types.Integer),
+    sqlalchemy.Column("version", types.String),
 )
 
 

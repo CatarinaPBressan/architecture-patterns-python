@@ -46,20 +46,21 @@ def flask_test_client(make_session):
     return app.test_client()
 
 
-def _random_uuid4():
-    return str(uuid.uuid4())[:8]
+@pytest.fixture
+def random_uuid_hex():
+    return lambda: uuid.uuid4().hex
 
 
 @pytest.fixture
-def random_sku():
-    return lambda: f"SKU {_random_uuid4()}"
+def random_sku(random_uuid_hex):
+    return lambda: f"SKU {random_uuid_hex()}"
 
 
 @pytest.fixture
-def random_batch_ref():
-    return lambda: f"BATCH {_random_uuid4()}"
+def random_batch_ref(random_uuid_hex):
+    return lambda: f"BATCH {random_uuid_hex()}"
 
 
 @pytest.fixture
-def random_order_id():
-    return lambda: f"ORDER {_random_uuid4()}"
+def random_order_id(random_uuid_hex):
+    return lambda: f"ORDER {random_uuid_hex()}"

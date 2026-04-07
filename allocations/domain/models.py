@@ -1,5 +1,6 @@
 import dataclasses
 import datetime
+import uuid
 
 from allocations.domain import exceptions
 
@@ -89,12 +90,14 @@ def deallocate(line: OrderLine, batches: list[Batch]) -> str:
 
 class Product:
     sku: str
-    batches: list[Batch]  # TODO: change to set
+    batches: list[Batch]
 
-    def __init__(self, sku: str, batches: list[Batch], version_number: int = 0) -> None:
+    def __init__(self, sku: str, batches: list[Batch], version: str | None = None) -> None:
         self.sku = sku
         self.batches = batches
-        self.version_number = version_number
+        if not version:
+            version = uuid.uuid4().hex
+        self.version = version
 
     def __hash__(self) -> int:
         return hash(self.sku)
@@ -111,7 +114,7 @@ class Product:
             raise exceptions.OutOfStockError(f"Out of stock for sku {line.sku}") from e
 
         batch.allocate(line)
-        self.version_number += 1
+        self.version = uuid.uuid4().hex
         return batch.reference
 
     def deallocate(self, line: OrderLine) -> str:

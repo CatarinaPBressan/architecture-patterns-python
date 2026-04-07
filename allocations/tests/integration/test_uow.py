@@ -16,12 +16,12 @@ def insert_batch_with_product(
     sku: str,
     quantity: int,
     eta: datetime.date | None,
-    version_number: int,
+    version: str,
     session: sqlalchemy_orm.Session,
 ) -> None:
     session.execute(
-        text("INSERT INTO products (sku, version_number)" "VALUES (:sku, :version_number)"),
-        {"sku": sku, "version_number": version_number},
+        text("INSERT INTO products (sku, version)" "VALUES (:sku, :version)"),
+        {"sku": sku, "version": version},
     )
 
     session.execute(
@@ -69,9 +69,11 @@ def test_uow_can_retrieve_a_product_and_allocate_to_it(make_session):
     assert batch_ref == "batch1"
 
 
-def test_uow_rolls_back_uncommited_work_by_default(make_session):
+def test_uow_rolls_back_uncommited_work_by_default(make_session, random_uuid_hex):
     with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
-        insert_batch_with_product("batch1", "MEDIUM-PLINTH", 100, None, 1, uow.session)
+        insert_batch_with_product(
+            "batch1", "MEDIUM-PLINTH", 100, None, random_uuid_hex(), uow.session
+        )
 
     session = make_session()
     rows = list(session.execute(text('SELECT * FROM "batches"')))
@@ -79,13 +81,15 @@ def test_uow_rolls_back_uncommited_work_by_default(make_session):
     session.rollback()
 
 
-def test_rolls_back_on_error(make_session):
+def test_rolls_back_on_error(make_session, random_uuid_hex):
     class TestException(Exception):
         pass
 
     with pytest.raises(TestException):
         with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
-            insert_batch_with_product("batch1", "MEDIUM-PLINTH", 100, None, 1, uow.session)
+            insert_batch_with_product(
+                "batch1", "MEDIUM-PLINTH", 100, None, random_uuid_hex(), uow.session
+            )
             raise TestException
 
     session = make_session()
@@ -94,7 +98,9 @@ def test_rolls_back_on_error(make_session):
     session.rollback()
 
 
-def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], make_session):
+def try_to_allocate(
+    order_id: str, sku: str, exceptions: list[Exception], versions: list[str], make_session
+):
     line = models.OrderLine(order_id, sku, 10)
     try:
         with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
@@ -103,32 +109,35 @@ def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], make_s
             product.allocate(line)
             time.sleep(0.2)
             uow.commit()
+            versions.append(product.version)
     except Exception as e:
         print(traceback.format_exc())
         exceptions.append(e)
 
 
 def test_concurrent_updates_to_version_are_not_allowed(
-    make_session, random_sku, random_batch_ref, random_order_id
+    make_session, random_sku, random_batch_ref, random_order_id, random_uuid_hex
 ):
     sku = random_sku()
     batch_ref = random_batch_ref()
+    initial_version = random_uuid_hex()
 
     with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
         session = uow.session
-        insert_batch_with_product(batch_ref, sku, 100, None, 1, session)
+        insert_batch_with_product(batch_ref, sku, 100, None, initial_version, session)
         session.commit()
 
     order_id_1 = random_order_id()
     order_id_2 = random_order_id()
 
     exceptions: list[Exception] = []
+    versions: list[str] = []
 
     try_to_allocate_1 = lambda: try_to_allocate(  # noqa: E731
-        order_id_1, sku, exceptions, make_session
+        order_id_1, sku, exceptions, versions, make_session
     )
     try_to_allocate_2 = lambda: try_to_allocate(  # noqa: E731
-        order_id_2, sku, exceptions, make_session
+        order_id_2, sku, exceptions, versions, make_session
     )
 
     thread_1 = threading.Thread(target=try_to_allocate_1)
@@ -139,14 +148,15 @@ def test_concurrent_updates_to_version_are_not_allowed(
     thread_1.join()
     thread_2.join()
 
+    assert len(exceptions) == 1
     exception = exceptions[0]
     assert "could not serialize access due to concurrent update" in str(exception)
 
+    assert len(versions) == 1
+    current_version = versions[0]
     session = make_session()
-    version = session.scalar(
-        text("SELECT version_number FROM products WHERE sku=:sku"), {"sku": sku}
-    )
-    assert version == 2
+    version = session.scalar(text("SELECT version FROM products WHERE sku=:sku"), {"sku": sku})
+    assert version == current_version
     session.rollback()
 
     session = make_session()
