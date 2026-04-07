@@ -1,9 +1,10 @@
 import datetime
-from typing import Any
+from typing import Annotated, Any
 
 import dotenv
 import sqlalchemy
-from fastapi import FastAPI, status
+import sqlalchemy.exc
+from fastapi import Depends, FastAPI, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import orm as sqlalchemy_orm
@@ -30,7 +31,7 @@ class BatchPartial(BatchReference):
 
 
 class BatchIn(BatchPartial):
-    quantity: int
+    quantity: int = Field(gt=0)
 
 
 class BatchOut(BatchPartial):
@@ -50,14 +51,19 @@ class Message(BaseModel):
     message: str
 
 
-def init_app():
+def session_maker():
     dotenv.load_dotenv()
     engine_kwargs = {"url": config.get_postgres(), **config.get_postgres_engine_kwargs()}
     engine = sqlalchemy.create_engine(**engine_kwargs)
-    allocations_orm.mapper_registry.metadata.create_all(engine)
-    allocations_orm.start_mappers()
+    try:
+        allocations_orm.start_mappers()
+    except sqlalchemy.exc.ArgumentError:
+        pass
 
-    session_maker = sqlalchemy_orm.sessionmaker(engine)
+    return sqlalchemy_orm.sessionmaker(engine)
+
+
+def init_app():
     app = FastAPI()
 
     @app.post(
@@ -66,7 +72,12 @@ def init_app():
         response_model=BatchReference,
         responses={status.HTTP_400_BAD_REQUEST: {"model": Message}},
     )
-    def allocate(order_line: OrderLine) -> Any:
+    def allocate(
+        session_maker: Annotated[
+            sqlalchemy_orm.sessionmaker[sqlalchemy_orm.Session], Depends(session_maker)
+        ],
+        order_line: OrderLine,
+    ) -> Any:
         uow = unit_of_work.SQLAlchemyProductUnitOfWork(session_maker)
         try:
             reference = services.allocate(
@@ -83,7 +94,12 @@ def init_app():
         response_model=BatchReference,
         responses={status.HTTP_400_BAD_REQUEST: {"model": Message}},
     )
-    def deallocate(order_line: OrderLine) -> Any:
+    def deallocate(
+        session_maker: Annotated[
+            sqlalchemy_orm.sessionmaker[sqlalchemy_orm.Session], Depends(session_maker)
+        ],
+        order_line: OrderLine,
+    ) -> Any:
         uow = unit_of_work.SQLAlchemyProductUnitOfWork(session_maker)
         try:
             reference = services.deallocate(
@@ -95,7 +111,12 @@ def init_app():
         return BatchReference(reference=reference)
 
     @app.post("/add_batch", status_code=status.HTTP_201_CREATED)
-    def add_batch(batch: BatchIn) -> BatchOut:
+    def add_batch(
+        session_maker: Annotated[
+            sqlalchemy_orm.sessionmaker[sqlalchemy_orm.Session], Depends(session_maker)
+        ],
+        batch: BatchIn,
+    ) -> BatchOut:
         uow = unit_of_work.SQLAlchemyProductUnitOfWork(session_maker)
         _batch = services.add_batch(batch.reference, batch.sku, batch.quantity, batch.eta, uow)
         return BatchOut.from_domain(_batch)
