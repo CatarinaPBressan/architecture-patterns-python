@@ -1,4 +1,5 @@
 import datetime
+from typing import Any
 
 import flask
 import sqlalchemy
@@ -10,11 +11,11 @@ from allocations.domain import exceptions
 from allocations.service_layer import services, unit_of_work
 
 
-def init_app(session_maker=None):
+def init_app(session_maker=None, engine_kwargs: dict[str, Any] | None = None):
     app = flask.Flask(__name__)
 
     if not session_maker:
-        engine = sqlalchemy.create_engine(config.get_app_sqlite())
+        engine = sqlalchemy.create_engine(**engine_kwargs)
         session_maker = sqlalchemy_orm.sessionmaker(engine)
 
     get_session = session_maker
@@ -83,9 +84,10 @@ def init_app(session_maker=None):
 
 
 def init_flask():
-    engine = sqlalchemy.create_engine(config.get_app_sqlite(), echo=True)
+    engine_kwargs = {"url": config.get_postgres(), **config.get_postgres_engine_kwargs()}
+    engine = sqlalchemy.create_engine(**engine_kwargs)
     allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
-    _app = init_app()
+    _app = init_app(engine_kwargs=engine_kwargs)
 
     return _app
