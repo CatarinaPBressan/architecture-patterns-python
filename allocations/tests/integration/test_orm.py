@@ -48,13 +48,14 @@ def test_orderline_mapper_can_load_lines_select_by_table(
     assert session.execute(select(allocations_orm.order_lines)).all() == expected
 
 
-def test_orderline_mapper_can_save_lines(session: sqlalchemy_orm.Session):
+def test_orderline_mapper_can_save_lines(postgres_session: sqlalchemy_orm.Session):
     new_line = models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)
-    session.add(new_line)
-    session.commit()
 
-    rows = list(session.execute(text('SELECT order_id, sku, quantity from "order_lines"')))
-    assert rows == [("order_1", "DECORATIVE-WIDGET", 12)]
+    postgres_session.add(new_line)
+    postgres_session.commit()
+
+    rows = list(postgres_session.execute(select(models.OrderLine)).all())
+    assert rows == [models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)]
 
 
 async def test_async_postgres():
