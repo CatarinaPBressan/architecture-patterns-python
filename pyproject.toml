@@ -13,6 +13,7 @@ dependencies = [
     "sqlalchemy (>=2.0.48,<3.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
     "psycopg[binary] (>=3.3.3,<4.0.0)",
+    "fastapi[standard-no-fastapi-cloud-cli] (>=0.135.3,<0.136.0)",
 ]
 
 [dependency-groups]
@@ -127,3 +128,6 @@ options = "--profile black --line-length 100 --float-to-top"
 # type = "exec"
 # executable = "ruff"
 # options = "check --fix REVISION_SCRIPT_FILENAME"
+
+[tool.fastapi]
+entrypoint = "allocations.entrypoints.fastapi_app:app"
