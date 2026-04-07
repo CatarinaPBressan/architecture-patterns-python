@@ -17,7 +17,9 @@ def load_env():
 
 @pytest.fixture
 def make_session():
-    engine = sqlalchemy.create_engine(config.get_postgres(test=True), echo=True)
+    engine = sqlalchemy.create_engine(
+        config.get_postgres(test=True), echo=True, **config.get_postgres_engine_kwargs()
+    )
     allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
 

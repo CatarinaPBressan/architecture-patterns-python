@@ -23,3 +23,7 @@ def get_postgres(test=False) -> str:
         f"://{os.environ["POSTGRES_USER"]}:{os.environ["POSTGRES_PASSWORD"]}"
         f"@{os.environ["POSTGRES_HOST"]}:{os.environ["POSTGRES_PORT"]}/{db_name}"
     )
+
+
+def get_postgres_engine_kwargs():
+    return {"isolation_level": "REPEATABLE READ"}

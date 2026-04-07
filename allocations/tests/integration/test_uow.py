@@ -1,4 +1,5 @@
 import datetime
+import threading
 import time
 import traceback
 
@@ -93,59 +94,68 @@ def test_rolls_back_on_error(make_session):
     session.rollback()
 
 
-def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], uow):
+def try_to_allocate(order_id: str, sku: str, exceptions: list[Exception], make_session):
     line = models.OrderLine(order_id, sku, 10)
     try:
-        product = uow.products.get(sku)
-        assert product
-        product.allocate(line)
-        time.sleep(0.2)
-        uow.commit()
+        with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
+            product = uow.products.get(sku)
+            assert product
+            product.allocate(line)
+            time.sleep(0.2)
+            uow.commit()
     except Exception as e:
         print(traceback.format_exc())
         exceptions.append(e)
 
 
-# def test_concurrent_updates_to_version_are_not_allowed(
-#     make_session, random_sku, random_batch_ref, random_order_id
-# ):
-#     sku = random_sku()
-#     batch_ref = random_batch_ref()
+def test_concurrent_updates_to_version_are_not_allowed(
+    make_session, random_sku, random_batch_ref, random_order_id
+):
+    sku = random_sku()
+    batch_ref = random_batch_ref()
 
-#     with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
-#         session = uow.session
-#         insert_batch_with_product(batch_ref, sku, 100, None, 1, session)
-#         session.commit()
+    with unit_of_work.SQLAlchemyProductUnitOfWork(make_session) as uow:
+        session = uow.session
+        insert_batch_with_product(batch_ref, sku, 100, None, 1, session)
+        session.commit()
 
-#         order_id_1 = random_order_id()
-#         order_id_2 = random_order_id()
+    order_id_1 = random_order_id()
+    order_id_2 = random_order_id()
 
-#         exceptions: list[Exception] = []
+    exceptions: list[Exception] = []
 
-#         try_to_allocate_1 = lambda: try_to_allocate(order_id_1, sku, exceptions, uow)  # noqa: E731
-#         try_to_allocate_2 = lambda: try_to_allocate(order_id_2, sku, exceptions, uow)  # noqa: E731
+    try_to_allocate_1 = lambda: try_to_allocate(  # noqa: E731
+        order_id_1, sku, exceptions, make_session
+    )
+    try_to_allocate_2 = lambda: try_to_allocate(  # noqa: E731
+        order_id_2, sku, exceptions, make_session
+    )
 
-#         thread_1 = threading.Thread(target=try_to_allocate_1)
-#         thread_2 = threading.Thread(target=try_to_allocate_2)
+    thread_1 = threading.Thread(target=try_to_allocate_1)
+    thread_2 = threading.Thread(target=try_to_allocate_2)
 
-#         thread_1.start()
-#         thread_2.start()
-#         thread_1.join()
-#         thread_2.join()
+    thread_1.start()
+    thread_2.start()
+    thread_1.join()
+    thread_2.join()
 
-#         version = session.scalar(
-#             text("SELECT version_number FROM products WHERE sku=:sku"), {"sku": sku}
-#         )
-#         assert version == 2
+    exception = exceptions[0]
+    assert "could not serialize access due to concurrent update" in str(exception)
 
-#         exception = exceptions[0]
-#         print(str(exception))
+    session = make_session()
+    version = session.scalar(
+        text("SELECT version_number FROM products WHERE sku=:sku"), {"sku": sku}
+    )
+    assert version == 2
+    session.rollback()
 
-#         orders = list(
-#             session.scalar(
-#                 text("SELECT id FROM order_lines WHERE sku=:sku"),
-#                 {"sku": sku},
-#             )
-#         )
+    session = make_session()
+    orders = list(
+        session.scalars(
+            text("SELECT id FROM order_lines WHERE sku=:sku"),
+            {"sku": sku},
+        )
+    )
 
-#         assert len(orders) == 1
+    assert len(orders) == 1
+    session.rollback()
