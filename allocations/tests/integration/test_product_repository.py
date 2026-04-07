@@ -61,10 +61,10 @@ def test_get_product_with_batches_and_allocations(
     sku = random_sku()
     batch_reference = random_batch_ref()
     order_id = random_order_id()
+    insert_product(sku, session)
     order_line_id = insert_order_line(order_id, sku, session)
     batch_id = insert_batch(batch_reference, sku, session)
     insert_allocation(order_line_id, batch_id, session)
-    insert_product(sku, session)
     product_repository = repositories.SQLAlchemyProductRepository(session)
 
     product = product_repository.get(sku)

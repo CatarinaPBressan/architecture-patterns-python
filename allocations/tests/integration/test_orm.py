@@ -12,9 +12,9 @@ def test_orderline_mapper_can_load_lines(session: sqlalchemy_orm.Session):
     session.execute(
         text(
             "INSERT INTO order_lines (order_id, sku, quantity) VALUES"
-            ' ("order1", "RED-CHAIR", 12),'
-            ' ("order1", "BLUE-TABLE", 13),'
-            ' ("order1", "BLUE-LIPSTICK", 14)'
+            " ('order1', 'RED-CHAIR', 12),"
+            " ('order1', 'BLUE-TABLE', 13),"
+            " ('order1', 'BLUE-LIPSTICK', 14)"
         )
     )
 
@@ -33,9 +33,9 @@ def test_orderline_mapper_can_load_lines_select_by_table(
     session.execute(
         text(
             "INSERT INTO order_lines (order_id, sku, quantity) VALUES"
-            ' ("order1", "RED-CHAIR", 12),'
-            ' ("order1", "BLUE-TABLE", 13),'
-            ' ("order1", "BLUE-LIPSTICK", 14)'
+            " ('order1', 'RED-CHAIR', 12),"
+            " ('order1', 'BLUE-TABLE', 13),"
+            " ('order1', 'BLUE-LIPSTICK', 14)"
         )
     )
 
@@ -48,13 +48,13 @@ def test_orderline_mapper_can_load_lines_select_by_table(
     assert session.execute(select(allocations_orm.order_lines)).all() == expected
 
 
-def test_orderline_mapper_can_save_lines(postgres_session: sqlalchemy_orm.Session):
+def test_orderline_mapper_can_save_lines(session: sqlalchemy_orm.Session):
     new_line = models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)
 
-    postgres_session.add(new_line)
-    postgres_session.commit()
+    session.add(new_line)
+    session.commit()
 
-    rows = postgres_session.scalars(select(models.OrderLine)).all()
+    rows = session.scalars(select(models.OrderLine)).all()
     assert rows == [models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)]
 
 

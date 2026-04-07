@@ -15,9 +15,28 @@ def load_env():
     dotenv.load_dotenv()
 
 
+# @pytest.fixture
+# def make_session():
+#     engine = sqlalchemy.create_engine(config.get_sqlite(), echo=True)
+#     allocations_orm.mapper_registry.metadata.create_all(engine)
+#     allocations_orm.start_mappers()
+
+#     yield sqlalchemy_orm.sessionmaker(bind=engine)
+
+#     allocations_orm.mapper_registry.metadata.drop_all(engine)
+#     allocations_orm.mapper_registry.dispose()
+
+
+# @pytest.fixture
+# def session(make_session):
+#     _session = make_session()
+
+#     yield _session
+
+
 @pytest.fixture
 def make_session():
-    engine = sqlalchemy.create_engine(config.get_sqlite(), echo=True)
+    engine = sqlalchemy.create_engine(config.get_postgres(), echo=True)
     allocations_orm.mapper_registry.metadata.create_all(engine)
     allocations_orm.start_mappers()
 
@@ -30,25 +49,6 @@ def make_session():
 @pytest.fixture
 def session(make_session):
     _session = make_session()
-
-    yield _session
-
-
-@pytest.fixture
-def make_postgres_session():
-    engine = sqlalchemy.create_engine(config.get_postgres(), echo=True)
-    allocations_orm.mapper_registry.metadata.create_all(engine)
-    allocations_orm.start_mappers()
-
-    yield sqlalchemy_orm.sessionmaker(bind=engine)
-
-    allocations_orm.mapper_registry.metadata.drop_all(engine)
-    allocations_orm.mapper_registry.dispose()
-
-
-@pytest.fixture
-def postgres_session(make_postgres_session):
-    _session = make_postgres_session()
 
     yield _session
 

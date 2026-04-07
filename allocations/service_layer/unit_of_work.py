@@ -37,6 +37,7 @@ class SQLAlchemyProductUnitOfWork(AbstractProductUnitOfWork):
 
     def __exit__(self, exc_type, exc, tb):
         super().__exit__(exc_type, exc, tb)
+        self.rollback()
         self.session.close()
 
     def commit(self):
