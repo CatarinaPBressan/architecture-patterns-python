@@ -54,7 +54,7 @@ def test_orderline_mapper_can_save_lines(postgres_session: sqlalchemy_orm.Sessio
     postgres_session.add(new_line)
     postgres_session.commit()
 
-    rows = list(postgres_session.execute(select(models.OrderLine)).all())
+    rows = postgres_session.scalars(select(models.OrderLine)).all()
     assert rows == [models.OrderLine("order_1", "DECORATIVE-WIDGET", 12)]
 
 
