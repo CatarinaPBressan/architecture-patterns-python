@@ -8,3 +8,14 @@ services:
       - 5432:5432
     volumes:
       - ~/.postgres:/var/lib/postgresql
+  fastapi:
+    container_name: fastapi
+    depends_on:
+      - postgres
+    image: allocations
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/code
