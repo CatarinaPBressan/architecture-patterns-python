@@ -1,9 +1,11 @@
 import uuid
+from typing import Generator
 
 import dotenv
 import pytest
 import sqlalchemy
 import sqlalchemy.orm as sqlalchemy_orm
+from fastapi.testclient import TestClient
 
 from allocations import config
 from allocations.adapters import orm as allocations_orm
@@ -47,8 +49,22 @@ def flask_test_client(make_session):
 
 
 @pytest.fixture
+def fastapi_test_client(make_session):
+    def test_db_override() -> Generator[sqlalchemy_orm.Session, None, None]:
+        return make_session
+
+    from allocations.entrypoints.fastapi_app import app, session_maker
+
+    app.dependency_overrides[session_maker] = test_db_override
+
+    yield TestClient(app)
+
+    app.dependency_overrides = {}
+
+
+@pytest.fixture
 def random_uuid_hex():
-    return lambda: uuid.uuid4().hex
+    return lambda: uuid.uuid4().hex.upper()
 
 
 @pytest.fixture
