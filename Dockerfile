@@ -11,4 +11,4 @@ COPY . .
 
 RUN ${POETRY_HOME}/bin/poetry install --only main --no-interaction --no-ansi
 
-ENTRYPOINT ${POETRY_HOME}/bin/poetry run fastapi dev
+ENTRYPOINT ["/opt/poetry/bin/poetry", "run", "fastapi", "dev", "--host", "0.0.0.0"]
